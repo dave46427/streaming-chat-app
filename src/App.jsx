@@ -16,6 +16,7 @@ export default function App(){
  <section className="hero"><p className="eyebrow">CLOUD MULTISTREAM CONTROL</p><h2>Stream everywhere. Manage everything in one place.</h2><p>This dashboard prepares your streaming destinations. A streaming relay backend is still required for real simultaneous broadcasting.</p><button className={live?'stop':'go'} onClick={()=>ready&&setLive(!live)}>{live?'Stop broadcast':'Go live everywhere'}</button>{!ready&&<small>Add a stream key for every enabled platform first.</small>}</section>
  <div className="bar"><h2>Streaming destinations</h2><button className="ghost" onClick={()=>setShow(!show)}>{show?'Hide keys':'Show keys'}</button></div>
  <section className="grid">{platforms.map(p=><article className="card" key={p.id}><div className="row"><strong>{p.name}</strong><input type="checkbox" checked={p.enabled} onChange={e=>update(p.id,{enabled:e.target.checked})}/></div><label>RTMP / RTMPS server</label><input value={p.server} disabled={!p.enabled||live} onChange={e=>update(p.id,{server:e.target.value})}/><label>Stream key</label><input type={show?'text':'password'} value={p.key} placeholder="Paste private stream key" disabled={!p.enabled||live} onChange={e=>update(p.id,{key:e.target.value})}/></article>)}</section>
- <section className="note"><b>OBS connection</b><p>Once the streaming relay is added, this area will contain your Railway ingest address and private input key.</p></section>
+ <section className="note"><b>Combined Chat</b><p>Your YouTube, Twitch, Facebook and TikTok messages will appear together here.</p><div><input type="text" placeholder="Type your message..." /><button>Send</button></div></section>
+
  </main>
 }
