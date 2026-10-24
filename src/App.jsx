@@ -34,4 +34,5 @@ useEffect(() => {
  <section className="note"><b>Combined Chat</b><p>Your YouTube, Twitch, Facebook and TikTok messages will appear together here.</p><div><input type="text" placeholder="Type your message..." /><button>Send</button><button onClick={connectTwitch}>{twitchConnected ? "Twitch connected ✅" : "Connect Twitch"}</button></div></section>
 
  </main>
-}
+} 
+
