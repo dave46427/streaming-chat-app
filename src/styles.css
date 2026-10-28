@@ -3,3 +3,64 @@ select{background:#080c12;color:#fff;border:1px solid #334155;border-radius:10px
 .hero .card{cursor:pointer;transition:.2s}.hero .card:hover{border-color:#6ee7f7;transform:translateY(-2px)}.hero .card input[type=checkbox]{width:20px;height:20px;accent-color:#089fc2;margin-right:10px}
 .hero>.go{width:100%;margin-top:22px;padding:16px;font-size:18px;cursor:pointer}.hero>.go:hover{background:#0bb9df}
 .hero>h1{font-size:46px;margin:0 0 10px;font-weight:800;letter-spacing:-1.5px;color:#fff;text-shadow:0 0 28px rgba(110,231,247,.18)}.hero>h1::after{content:"";display:block;width:70px;height:4px;background:#6ee7f7;border-radius:10px;margin-top:14px}
+
+/* StreamBridge responsive layout */
+
+@media (max-width: 768px) {
+  main {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .hero,
+  .card,
+  .note {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .hero > h1 {
+    font-size: 34px;
+  }
+
+  .hero h2 {
+    font-size: 28px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  header,
+  .row,
+  .bar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  button,
+  .go,
+  .stop,
+  .ghost,
+  select,
+  input {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  select {
+    max-width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* Larger touch targets for tablets / headset browsers */
+@media (min-width: 769px) {
+  button,
+  .go,
+  .stop,
+  .ghost {
+    min-height: 48px;
+    cursor: pointer;
+  }
+}
