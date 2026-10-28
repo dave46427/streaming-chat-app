@@ -224,54 +224,7 @@ useEffect(() => {
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true";
   };
-useEffect(() => {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
-
-  tiktokSocketRef.current = socket;
-
-  socket.onopen = () => {
-    setTiktokStatus("Ready to connect");
-  };
-
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      if (data.type === "tiktok_status") {
-        setTiktokConnected(Boolean(data.connected));
-        setTiktokStatus(data.status || "TikTok status updated");
-      }
-
-      if (data.type === "chat_message" && data.message) {
-        setMessages((current) => {
-          if (current.some((item) => item.id === data.message.id)) {
-            return current;
-          }
-
-          return [...current, data.message].slice(-100);
-        });
-      }
-    } catch {
-      setTiktokStatus("Could not read the TikTok server message.");
-    }
-  };
-
-  socket.onerror = () => {
-    setTiktokConnected(false);
-    setTiktokStatus("TikTok server connection error");
-  };
-
-  socket.onclose = () => {
-    setTiktokConnected(false);
-    setTiktokStatus("TikTok server disconnected");
-  };
-
-  return () => {
-    socket.close();
-    tiktokSocketRef.current = null;
-  };
-}, []);  const connectYouTube = () => {
+  const connectYouTube = () => {
     sessionStorage.setItem("streambridge_setup_complete", "true");
     const state = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     sessionStorage.setItem("youtube_oauth_pending", "true");
@@ -812,4 +765,5 @@ useEffect(() => {
     </main>
   );
 }
+
 
