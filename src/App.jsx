@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
 import { YOUTUBE_CLIENT_ID, YOUTUBE_SCOPE, getYouTubeRedirectUri } from "./youtubeConfig";
@@ -44,21 +44,21 @@ function LiveChatScreen({
   return (
     <main style={{ minHeight: "100vh", background: "#0b1020", color: "white", padding: 18, fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <button type="button" onClick={onBack} style={liveButtonStyle}>← Settings</button>
+        <button type="button" onClick={onBack} style={liveButtonStyle}>â† Settings</button>
         <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>STREAMBRIDGE LIVE</div>
-        <div style={{ color: "#70f0a0", fontWeight: 700 }}>● LIVE CHAT</div>
+        <div style={{ color: "#70f0a0", fontWeight: 700 }}>â— LIVE CHAT</div>
       </header>
 
       <section style={{ background: "#111831", border: "1px solid #27304f", borderRadius: 18, height: "calc(100vh - 110px)", minHeight: 430, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "16px 18px", borderBottom: "1px solid #27304f" }}>
-          <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>💬 Combined Chat</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>ðŸ’¬ Combined Chat</div>
           <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 4 }}>Twitch: {twitchStatus}</div>
           <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 2 }}>YouTube: {youtubeStatus}</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
           {messages.length === 0 ? (
-            <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messages…</div>
+            <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messagesâ€¦</div>
           ) : (
             messages.map((msg, index) => (
               <div
@@ -72,7 +72,7 @@ function LiveChatScreen({
                 }}
               >
                 <div style={{ fontSize: ".8rem", color: "#aeb8d4", marginBottom: 4 }}>
-                  {msg.platform ?? "Chat"} · <strong style={{ color: "#fff" }}>{msg.username ?? "Viewer"}</strong>
+                  {msg.platform ?? "Chat"} Â· <strong style={{ color: "#fff" }}>{msg.username ?? "Viewer"}</strong>
                 </div>
                 <div style={{ fontSize: "1.05rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
               </div>
@@ -90,7 +90,7 @@ function LiveChatScreen({
           <input
             value={messageText}
             onChange={(event) => setMessageText(event.target.value)}
-            placeholder="Type your message…"
+            placeholder="Type your messageâ€¦"
             style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 10, border: "1px solid #384261", background: "#151d36", color: "white", fontSize: "1rem" }}
           />
           <button type="submit" disabled={!canSend} style={{ ...liveButtonStyle, background: canSend ? "#7357ff" : "#4b5063", cursor: canSend ? "pointer" : "not-allowed" }}>SEND</button>
@@ -114,6 +114,11 @@ export default function App() {
   const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token")));
   const [youtubeStatus, setYoutubeStatus] = useState("Not connected");
   const [youtubeLiveChatId, setYoutubeLiveChatId] = useState("");
+  const [tiktokUsername, setTiktokUsername] = useState(
+  () => localStorage.getItem("tiktok_username") || ""
+);
+const [tiktokConnected, setTiktokConnected] = useState(false);
+const [tiktokStatus, setTiktokStatus] = useState("Not connected");
 
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -121,15 +126,94 @@ export default function App() {
   const [platforms, setPlatforms] = useState(defaults);
   const [live, setLive] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
-
+  const tiktokSocketRef = useRef(null);
   const socketRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const reconnectUrlRef = useRef(null);
   const reconnectingSocketRef = useRef(null);
   const youtubePollTimerRef = useRef(null);
   const youtubeNextPageTokenRef = useRef("");
+useEffect(() => {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
+  tiktokSocketRef.current = socket;
+
+  socket.onopen = () => {
+    setTiktokStatus("Ready to connect");
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "tiktok_status") {
+        setTiktokConnected(Boolean(data.connected));
+        setTiktokStatus(data.status || "TikTok status updated");
+      }
+
+      if (data.type === "chat_message" && data.message) {
+        setMessages((current) => {
+          if (current.some((item) => item.id === data.message.id)) {
+            return current;
+          }
+
+          return [...current, data.message].slice(-100);
+        });
+      }
+    } catch {
+      setTiktokStatus("Could not read the TikTok server message.");
+    }
+  };
+
+  socket.onerror = () => {
+    setTiktokConnected(false);
+    setTiktokStatus("TikTok server connection error");
+  };
+
+  socket.onclose = () => {
+    setTiktokConnected(false);
+    setTiktokStatus("TikTok server disconnected");
+  };
+
+  return () => {
+    socket.close();
+    tiktokSocketRef.current = null;
+  };
+}, []);
+
+  const connectTikTok = () => {
+    const username = tiktokUsername.trim().replace(/^@/, "");
+
+    if (!username) {
+      setTiktokStatus("Enter a TikTok username first.");
+      return;
+    }
+
+    if (!tiktokSocketRef.current || tiktokSocketRef.current.readyState !== WebSocket.OPEN) {
+      setTiktokStatus("TikTok server is not ready. Try again in a moment.");
+      return;
+    }
+
+    localStorage.setItem("tiktok_username", username);
+    setTiktokUsername(username);
+    setTiktokStatus(`Connecting to @${username}...`);
+    tiktokSocketRef.current.send(JSON.stringify({
+      type: "connect_tiktok",
+      username,
+    }));
+  };
+
+  const disconnectTikTok = () => {
+    if (tiktokSocketRef.current?.readyState === WebSocket.OPEN) {
+      tiktokSocketRef.current.send(JSON.stringify({ type: "disconnect_tiktok" }));
+    }
+
+    setTiktokConnected(false);
+    setTiktokStatus("Not connected");
+  };
   const connectTwitch = () => {
+
     sessionStorage.setItem("streambridge_setup_complete", "true");
     sessionStorage.removeItem("youtube_oauth_pending");
     const redirectUri = window.location.origin + "/";
@@ -140,8 +224,54 @@ export default function App() {
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true";
   };
+useEffect(() => {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-  const connectYouTube = () => {
+  tiktokSocketRef.current = socket;
+
+  socket.onopen = () => {
+    setTiktokStatus("Ready to connect");
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "tiktok_status") {
+        setTiktokConnected(Boolean(data.connected));
+        setTiktokStatus(data.status || "TikTok status updated");
+      }
+
+      if (data.type === "chat_message" && data.message) {
+        setMessages((current) => {
+          if (current.some((item) => item.id === data.message.id)) {
+            return current;
+          }
+
+          return [...current, data.message].slice(-100);
+        });
+      }
+    } catch {
+      setTiktokStatus("Could not read the TikTok server message.");
+    }
+  };
+
+  socket.onerror = () => {
+    setTiktokConnected(false);
+    setTiktokStatus("TikTok server connection error");
+  };
+
+  socket.onclose = () => {
+    setTiktokConnected(false);
+    setTiktokStatus("TikTok server disconnected");
+  };
+
+  return () => {
+    socket.close();
+    tiktokSocketRef.current = null;
+  };
+}, []);  const connectYouTube = () => {
     sessionStorage.setItem("streambridge_setup_complete", "true");
     const state = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     sessionStorage.setItem("youtube_oauth_pending", "true");
@@ -627,6 +757,34 @@ export default function App() {
 
         <p><b>Twitch:</b> {twitchStatus}</p>
         <p><b>YouTube:</b> {youtubeStatus}</p>
+<div style={{ margin: "12px 0" }}>
+  <label htmlFor="tiktok-username"><b>TikTok username</b></label>
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+    <input
+      id="tiktok-username"
+      type="text"
+      placeholder="Example: yourusername"
+      value={tiktokUsername}
+      onChange={(e) => setTiktokUsername(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") connectTikTok();
+      }}
+    />
+
+    <button type="button" onClick={connectTikTok}>
+      {tiktokConnected ? "Reconnect TikTok" : "Connect TikTok"}
+    </button>
+
+    {tiktokConnected && (
+      <button type="button" onClick={disconnectTikTok}>
+        Disconnect TikTok
+      </button>
+    )}
+  </div>
+</div>
+
+<p><b>TikTok:</b> {tiktokStatus}</p>
+
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           <button type="button" onClick={connectTwitch}>{twitchConnected ? "Reconnect Twitch" : "Connect Twitch"}</button>
@@ -654,3 +812,4 @@ export default function App() {
     </main>
   );
 }
+
