@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -6,6 +7,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import {
   TikTokLiveConnection,
   WebcastEvent,
+  SignConfig,
 } from "tiktok-live-connector";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,6 +18,17 @@ const server = createServer(app);
 
 const PORT = Number(process.env.PORT || 3000);
 const DIST_FOLDER = path.join(__dirname, "dist");
+const EULER_API_KEY =
+  process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
+
+if (EULER_API_KEY) {
+  SignConfig.apiKey = EULER_API_KEY;
+  console.log("Euler Stream API key loaded.");
+} else {
+  console.warn(
+    "Euler Stream API key was not found. Add EULER_API_KEY to .env or Railway Variables."
+  );
+}
 
 app.disable("x-powered-by");
 app.use(express.json());
@@ -24,6 +37,7 @@ app.get("/api/health", (request, response) => {
   response.json({
     ok: true,
     service: "StreamBridge",
+    eulerApiKeyLoaded: Boolean(EULER_API_KEY),
   });
 });
 
@@ -81,6 +95,7 @@ async function disconnectTikTok(socket) {
 }
 
 async function connectTikTok(socket, usernameValue) {
+console.log("TikTok connect request received:", usernameValue);
   const username = cleanTikTokUsername(usernameValue);
 
   if (!username) {
@@ -88,6 +103,15 @@ async function connectTikTok(socket, usernameValue) {
       type: "tiktok_status",
       connected: false,
       status: "Enter a TikTok username first.",
+    });
+    return;
+  }
+
+  if (!EULER_API_KEY) {
+    sendJson(socket, {
+      type: "tiktok_status",
+      connected: false,
+      status: "Euler Stream API key is not configured on the server.",
     });
     return;
   }
@@ -105,20 +129,13 @@ async function connectTikTok(socket, usernameValue) {
     enableExtendedGiftInfo: false,
   };
 
-  /*
-   * If TIKTOK_SIGN_API_KEY is added to Railway Variables,
-   * it will be passed to the connector automatically.
-   */
-  if (process.env.TIKTOK_SIGN_API_KEY) {
-    options.signApiKey = process.env.TIKTOK_SIGN_API_KEY;
-  }
-
   const connection = new TikTokLiveConnection(username, options);
 
   socket.tiktokConnection = connection;
   socket.tiktokUsername = username;
 
   connection.on(WebcastEvent.CHAT, (data) => {
+ console.log("TikTok CHAT event received:", data);
     const messageText = String(data?.comment || "").trim();
 
     if (!messageText) {
@@ -187,7 +204,10 @@ async function connectTikTok(socket, usernameValue) {
 
   try {
     const state = await connection.connect();
-
+console.log(
+  `TikTok connected successfully to @${username}. Room ID:`,
+  state?.roomId || connection.roomId || "unknown"
+);
     if (socket.tiktokConnection !== connection) {
       await connection.disconnect().catch(() => {});
       return;
@@ -309,9 +329,7 @@ app.use((error, request, response, next) => {
   console.error("StreamBridge server error:", error);
 
   if (response.headersSent) {
-    return next(error);
-  }
-
+    return next(er
   response.status(500).json({
     ok: false,
     error: "StreamBridge server error.",
