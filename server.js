@@ -144,7 +144,7 @@ socket.tiktokUsername = username;
 connection.on(WebcastEvent.CHAT, (data) => {
   console.log("TikTok CHAT event received:", data);
 
-  const messageText = String(data?.comment || "").trim();
+  const messageText = String(data?.comment || data?.content || "").trim();
 
   if (!messageText) {
     return;
