@@ -329,7 +329,9 @@ app.use((error, request, response, next) => {
   console.error("StreamBridge server error:", error);
 
   if (response.headersSent) {
-    return next(er
+    return next(error);
+}
+
   response.status(500).json({
     ok: false,
     error: "StreamBridge server error.",
