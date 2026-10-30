@@ -124,43 +124,50 @@ console.log("TikTok connect request received:", usernameValue);
     status: `Connecting to @${username}'s TikTok LIVE...`,
   });
 
-  const options = {
-    processInitialData: false,
-    enableExtendedGiftInfo: false,
-  };
 
-  const connection = new TikTokLiveConnection(username, options);
 
-  socket.tiktokConnection = connection;
-  socket.tiktokUsername = username;
 
-  connection.on(WebcastEvent.CHAT, (data) => {
- console.log("TikTok CHAT event received:", data);
-    const messageText = String(data?.comment || "").trim();
+ const options = {
+  processInitialData: true,
+  enableExtendedGiftInfo: false,
+};
 
-    if (!messageText) {
-      return;
-    }
+const connection = new TikTokLiveConnection(username, options);
 
-    const sender =
-      data?.user?.uniqueId ||
-      data?.user?.nickname ||
-      data?.user?.userId ||
-      "TikTok viewer";
+connection.on(WebcastEvent.MEMBER, (data) => {
+  console.log("TikTok MEMBER event received:", data?.user?.uniqueId);
+});
 
-    sendJson(socket, {
-      type: "chat_message",
-      message: {
-        id: `tiktok-${data?.msgId || Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}`,
-        platform: "TikTok",
-        username: sender,
-        text: messageText,
-      },
-    });
+socket.tiktokConnection = connection;
+socket.tiktokUsername = username;
+
+connection.on(WebcastEvent.CHAT, (data) => {
+  console.log("TikTok CHAT event received:", data);
+
+  const messageText = String(data?.comment || "").trim();
+
+  if (!messageText) {
+    return;
+  }
+
+  const sender =
+    data?.user?.uniqueId ||
+    data?.user?.nickname ||
+    data?.user?.userId ||
+    "TikTok viewer";
+
+  sendJson(socket, {
+    type: "chat_message",
+    message: {
+      id: `tiktok-${data?.msgId || Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`,
+      platform: "TikTok",
+      username: sender,
+      text: messageText,
+    },
   });
-
+});
   connection.on(WebcastEvent.DISCONNECTED, () => {
     if (socket.tiktokConnection !== connection) {
       return;
