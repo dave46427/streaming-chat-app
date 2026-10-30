@@ -330,7 +330,7 @@ app.use((error, request, response, next) => {
 
   if (response.headersSent) {
     return next(error);
-}
+  }
 
   response.status(500).json({
     ok: false,
