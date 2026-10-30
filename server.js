@@ -16,8 +16,19 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = createServer(app);
 
-const TIKTOK_SESSION_ID = process.env.TIKTOK_SESSION_ID || "";
-const TIKTOK_TARGET_IDC = process.env.TIKTOK_TARGET_IDC || "";
+const PORT = Number(process.env.PORT || 3000);
+const DIST_FOLDER = path.join(__dirname, "dist");
+const EULER_API_KEY =
+  process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
+
+if (EULER_API_KEY) {
+  SignConfig.apiKey = EULER_API_KEY;
+  console.log("Euler Stream API key loaded.");
+} else {
+  console.warn(
+    "Euler Stream API key was not found. Add EULER_API_KEY to .env or Railway Variables."
+  );
+}
 
 app.disable("x-powered-by");
 app.use(express.json());
@@ -114,25 +125,11 @@ console.log("TikTok connect request received:", usernameValue);
   });
 
 
-const options = {
+
+
+ const options = {
   processInitialData: true,
   enableExtendedGiftInfo: false,
-  signApiKey: EULER_API_KEY,
-
-  ...(TIKTOK_SESSION_ID && TIKTOK_TARGET_IDC
-    ? {
-        session: {
-          cookie: {
-            type: "cookie",
-            value: {
-              sessionId: TIKTOK_SESSION_ID,
-              ttTargetIdc: TIKTOK_TARGET_IDC,
-            },
-          },
-        },
-        authenticateWs: true,
-      }
-    : {}),
 };
 
 const connection = new TikTokLiveConnection(username, options);
@@ -274,69 +271,7 @@ websocketServer.on("connection", (socket) => {
         await connectTikTok(socket, command.username);
         return;
       }
-if (command.type === "send_tiktok") {
-console.log("STREAMBRIDGE: send_tiktok command received", command.message);
 
-  cconsole.log("STREAonst messageText = String(command.message || "").trim();
-  const connection = socket.tiktokConnection;
-
-  if (!messageText) {
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      message: "Type a TikTok message first.",
-    });
-    return;
-  }
-
-  if (!connection || !connection.isConnected) {
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      message: "Connect to TikTok before sending a message.",
-    });
-    return;
-  }
-
-  if (!TIKTOK_SESSION_ID || !TIKTOK_TARGET_IDC) {
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      message: "TikTok sending credentials are not configured.",
-    });
-    return;
-  }
-
-  try {
-    await connection.sendMessage(
-      messageText,
-      connection.roomId || undefined
-    );
-
-    console.log("TikTok message sent:", messageText);
-
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: true,
-      message: "TikTok message sent successfully.",
-    });
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "TikTok rejected the message.";
-
-    console.error("TikTok send error:", errorMessage);
-
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      message: `TikTok message failed: ${errorMessage}`,
-    });
-  }
-
-  return;
-}
       if (command.type === "disconnect_tiktok") {
         await disconnectTikTok(socket);
 
