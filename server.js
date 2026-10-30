@@ -13,10 +13,6 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 3000;
-const DIST_FOLDER = path.join(__dirname, "dist");
-const EULER_API_KEY = process.env.EULER_API_KEY || "";
-
 const app = express();
 const server = createServer(app);
 
