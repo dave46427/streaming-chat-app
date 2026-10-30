@@ -277,7 +277,8 @@ websocketServer.on("connection", (socket) => {
 if (command.type === "send_tiktok") {
 console.log("STREAMBRIDGE: send_tiktok command received", command.message);
 
-  cconsole.log("STREAonst messageText = String(command.message || "").trim();
+  console.log("STREAMBRIDGE: send_tiktok command received", command.message);
+const messageText = String(command.message || "").trim();
   const connection = socket.tiktokConnection;
 
   if (!messageText) {
