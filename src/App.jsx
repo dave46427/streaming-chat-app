@@ -32,6 +32,7 @@ function LiveChatScreen({
   canSend,
   twitchStatus,
   youtubeStatus,
+  tiktokStatus,
   sendTarget,
   setSendTarget,
 }) {
@@ -44,21 +45,22 @@ function LiveChatScreen({
   return (
     <main style={{ minHeight: "100vh", background: "#0b1020", color: "white", padding: 18, fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <button type="button" onClick={onBack} style={liveButtonStyle}>â† Settings</button>
+        <button type="button" onClick={onBack} style={liveButtonStyle}>Ã¢â€ Â Settings</button>
         <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>STREAMBRIDGE LIVE</div>
-        <div style={{ color: "#70f0a0", fontWeight: 700 }}>â— LIVE CHAT</div>
+        <div style={{ color: "#70f0a0", fontWeight: 700 }}>Ã¢â€”Â LIVE CHAT</div>
       </header>
 
       <section style={{ background: "#111831", border: "1px solid #27304f", borderRadius: 18, height: "calc(100vh - 110px)", minHeight: 430, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "16px 18px", borderBottom: "1px solid #27304f" }}>
-          <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>ðŸ’¬ Combined Chat</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>Ã°Å¸â€™Â¬ Combined Chat</div>
           <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 4 }}>Twitch: {twitchStatus}</div>
           <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 2 }}>YouTube: {youtubeStatus}</div>
+          <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 2 }}>TikTok: {tiktokStatus}</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
           {messages.length === 0 ? (
-            <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messagesâ€¦</div>
+            <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messagesÃ¢â‚¬Â¦</div>
           ) : (
             messages.map((msg, index) => (
               <div
@@ -72,7 +74,7 @@ function LiveChatScreen({
                 }}
               >
                 <div style={{ fontSize: ".8rem", color: "#aeb8d4", marginBottom: 4 }}>
-                  {msg.platform ?? "Chat"} Â· <strong style={{ color: "#fff" }}>{msg.username ?? "Viewer"}</strong>
+                  {msg.platform ?? "Chat"} Ã‚Â· <strong style={{ color: "#fff" }}>{msg.username ?? "Viewer"}</strong>
                 </div>
                 <div style={{ fontSize: "1.05rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
               </div>
@@ -85,15 +87,17 @@ function LiveChatScreen({
           <select value={sendTarget} onChange={(event) => setSendTarget(event.target.value)} style={{ padding: "10px", borderRadius: 10, background: "#151d36", color: "white" }}>
             <option value="twitch">Twitch</option>
             <option value="youtube">YouTube</option>
-            <option value="both">Both</option>
+            <option value="tiktok">TikTok</option>
+            <option value="both">Twitch + YouTube</option>
+            <option value="all">All Connected</option>
           </select>
           <input
             value={messageText}
             onChange={(event) => setMessageText(event.target.value)}
-            placeholder="Type your messageâ€¦"
+            placeholder="Type your messageÃ¢â‚¬Â¦"
             style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 10, border: "1px solid #384261", background: "#151d36", color: "white", fontSize: "1rem" }}
           />
-          <button type="submit" disabled={!canSend} style={{ ...liveButtonStyle, background: canSend ? "#7357ff" : "#4b5063", cursor: canSend ? "pointer" : "not-allowed" }}>SEND</button>
+          <button type="submit" disabled={!canSend} style={{ ...liveButtonStyle, background: canSend ? "#7357ff" : "#4b5063", cursor: canSend ? "pointer" : "not-allowed" }}>{sendTarget === "tiktok" ? "SEND TO TIKTOK" : sendTarget === "youtube" ? "SEND TO YOUTUBE" : sendTarget === "twitch" ? "SEND TO TWITCH" : "SEND"}</button>
         </form>
       </section>
     </main>
@@ -135,7 +139,11 @@ const [tiktokStatus, setTiktokStatus] = useState("Not connected");
   const youtubeNextPageTokenRef = useRef("");
 useEffect(() => {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+  const socket = new WebSocket(
+  window.location.hostname === "localhost"
+    ? "ws://localhost:3000/ws"
+    : `${protocol}//${window.location.host}/ws`
+);
 
   tiktokSocketRef.current = socket;
 
@@ -150,6 +158,10 @@ useEffect(() => {
       if (data.type === "tiktok_status") {
         setTiktokConnected(Boolean(data.connected));
         setTiktokStatus(data.status || "TikTok status updated");
+      }
+
+      if (data.type === "tiktok_send_status") {
+        setTiktokStatus(data.status || (data.sent ? "TikTok message sent." : "TikTok message was not sent."));
       }
 
       if (data.type === "chat_message" && data.message) {
@@ -596,16 +608,36 @@ useEffect(() => {
     }
   };
 
+  const sendTikTokMessage = async (textOverride) => {
+    const text = (textOverride ?? chatInput).trim();
+    const socket = tiktokSocketRef.current;
+    if (!text) throw new Error("Enter a TikTok message first.");
+    if (!tiktokConnected || !socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error("TikTok is not ready to send.");
+    }
+    socket.send(JSON.stringify({ type: "send_tiktok_message", text }));
+  };
+
   const sendSelectedMessage = async () => {
     const text = chatInput.trim();
     if (!text) return;
     try {
       if (sendTarget === "twitch") await sendTwitchMessage(text);
       if (sendTarget === "youtube") await sendYouTubeMessage(text);
+      if (sendTarget === "tiktok") await sendTikTokMessage(text);
       if (sendTarget === "both") await Promise.all([sendTwitchMessage(text), sendYouTubeMessage(text)]);
+      if (sendTarget === "all") {
+        const sends = [];
+        if (twitchConnected && activeChannel) sends.push(sendTwitchMessage(text));
+        if (youtubeConnected && youtubeLiveChatId) sends.push(sendYouTubeMessage(text));
+        if (tiktokConnected) sends.push(sendTikTokMessage(text));
+        if (!sends.length) throw new Error("No chat platforms are ready to send.");
+        await Promise.all(sends);
+      }
       setChatInput("");
     } catch (error) {
       if (sendTarget === "youtube") setYoutubeStatus(`Send failed: ${error.message}`);
+      else if (sendTarget === "tiktok" || sendTarget === "all") setTiktokStatus(`Send failed: ${error.message}`);
       else setTwitchStatus(`Send failed: ${error.message}`);
     }
   };
@@ -621,7 +653,9 @@ useEffect(() => {
   const canSend = Boolean(chatInput.trim()) && (
     (sendTarget === "twitch" && twitchConnected && activeChannel) ||
     (sendTarget === "youtube" && youtubeConnected && youtubeLiveChatId) ||
-    (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId)
+    (sendTarget === "tiktok" && tiktokConnected) ||
+    (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId) ||
+    (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId) || tiktokConnected))
   );
 
   if (!setupComplete) {
@@ -660,6 +694,7 @@ useEffect(() => {
         canSend={canSend}
         twitchStatus={twitchStatus}
         youtubeStatus={youtubeStatus}
+        tiktokStatus={tiktokStatus}
         sendTarget={sendTarget}
         setSendTarget={setSendTarget}
       />
@@ -755,15 +790,18 @@ useEffect(() => {
           <select value={sendTarget} onChange={(e) => setSendTarget(e.target.value)}>
             <option value="twitch">Twitch</option>
             <option value="youtube">YouTube</option>
-            <option value="both">Both</option>
+            <option value="tiktok">TikTok</option>
+            <option value="both">Twitch + YouTube</option>
+            <option value="all">All Connected</option>
           </select>
           <input type="text" placeholder="Type your message..." value={chatInput}
             onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && canSend && sendSelectedMessage()} />
-          <button type="button" onClick={sendSelectedMessage} disabled={!canSend}>Send</button>
+          <button type="button" onClick={sendSelectedMessage} disabled={!canSend}>{sendTarget === "tiktok" ? "Send to TikTok" : sendTarget === "youtube" ? "Send to YouTube" : sendTarget === "twitch" ? "Send to Twitch" : "Send"}</button>
         </div>
       </section>
     </main>
   );
 }
+
 
 
