@@ -7,6 +7,12 @@ export default defineConfig({
     allowedHosts: [
       "streaming-chat-app-tu3j.onrender.com",
       "streaming-chat-app-production-dc88.up.railway.app"
-    ]
+    ],
+    proxy: {
+      "/ws": {
+        target: "ws://localhost:3000",
+        ws: true
+      }
+    }
   }
 });

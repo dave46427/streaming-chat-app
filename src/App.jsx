@@ -53,9 +53,10 @@ function LiveChatScreen({
       <section style={{ background: "#111831", border: "1px solid #27304f", borderRadius: 18, height: "calc(100vh - 110px)", minHeight: 430, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "16px 18px", borderBottom: "1px solid #27304f" }}>
           <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>Ã°Å¸â€™Â¬ Combined Chat</div>
-          <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 4 }}>Twitch: {twitchStatus}</div>
-          <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 2 }}>YouTube: {youtubeStatus}</div>
-          <div style={{ color: "#aeb8d4", fontSize: ".85rem", marginTop: 2 }}>TikTok: {tiktokStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 4 }}>🟢 Twitch: {twitchStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>🟢 YouTube: {youtubeStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>🟢 TikTok: {tiktokStatus}</div>
+          <div style={{ color: "#ffb347", fontSize: ".85rem", marginTop: 2 }}>🟠 TikTok Send: Unavailable</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
