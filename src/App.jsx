@@ -657,11 +657,10 @@ useEffect(() => {
   const canSend = Boolean(chatInput.trim()) && (
     (sendTarget === "twitch" && twitchConnected && activeChannel) ||
     (sendTarget === "youtube" && youtubeConnected && youtubeLiveChatId) ||
-    
+    (sendTarget === "tiktok" && tiktokConnected) ||
     (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId) ||
-    (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId)))
+    (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId) || tiktokConnected))
   );
-
   if (!setupComplete) {
     return (
       <main>
