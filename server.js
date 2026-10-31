@@ -153,7 +153,7 @@ socket.tiktokConnection = connection;
 socket.tiktokUsername = username;
 
 connection.on(WebcastEvent.CHAT, (data) => {
-  console.log("TikTok CHAT event received:", data);
+  console.log(`TikTok chat received: ${data?.user?.uniqueId || "Unknown"}: ${data?.comment || data?.content || ""}`);
 
   const messageText = String(data?.comment || data?.content || "").trim();
 
