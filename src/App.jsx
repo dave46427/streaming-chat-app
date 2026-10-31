@@ -56,7 +56,7 @@ function LiveChatScreen({
           <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 4 }}>🟢 Twitch: {twitchStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>🟢 YouTube: {youtubeStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>🟢 TikTok: {tiktokStatus}</div>
-          <div style={{ color: "#ffb347", fontSize: ".85rem", marginTop: 2 }}>🟠 TikTok Send: Unavailable</div>
+          <div style={{ color: tiktokConnected ? "#70f0a0" : "#ffb347", fontSize: ".85rem", marginTop: 2 }}>TikTok Send: {tiktokConnected ? "Ready" : "Not connected"}</div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
@@ -88,6 +88,7 @@ function LiveChatScreen({
           <select value={sendTarget} onChange={(event) => setSendTarget(event.target.value)} style={{ padding: "10px", borderRadius: 10, background: "#151d36", color: "white" }}>
             <option value="twitch">Twitch</option>
             <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
             <option value="both">Twitch + YouTube</option>
             <option value="all">All Sendable Platforms</option>
           </select>
@@ -97,7 +98,7 @@ function LiveChatScreen({
             placeholder="Type your message..."
             style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 10, border: "1px solid #384261", background: "#151d36", color: "white", fontSize: "1rem" }}
           />
-          <button type="submit" disabled={!canSend} style={{ ...liveButtonStyle, background: canSend ? "#7357ff" : "#4b5063", cursor: canSend ? "pointer" : "not-allowed" }}>{sendTarget === "youtube" ? "SEND TO YOUTUBE" : sendTarget === "twitch" ? "SEND TO TWITCH" : "SEND"}</button>
+          <button type="submit" disabled={!canSend} style={{ ...liveButtonStyle, background: canSend ? "#7357ff" : "#4b5063", cursor: canSend ? "pointer" : "not-allowed" }}>{sendTarget === "youtube" ? "SEND TO YOUTUBE" : sendTarget === "twitch" ? "SEND TO TWITCH" : sendTarget === "tiktok" ? "SEND TO TIKTOK" : "SEND"}</button>
         </form>
       </section>
     </main>
@@ -626,11 +627,13 @@ useEffect(() => {
     try {
       if (sendTarget === "twitch") await sendTwitchMessage(text);
       if (sendTarget === "youtube") await sendYouTubeMessage(text);
+      if (sendTarget === "tiktok") await sendTikTokMessage(text);
       if (sendTarget === "both") await Promise.all([sendTwitchMessage(text), sendYouTubeMessage(text)]);
       if (sendTarget === "all") {
         const sends = [];
         if (twitchConnected && activeChannel) sends.push(sendTwitchMessage(text));
         if (youtubeConnected && youtubeLiveChatId) sends.push(sendYouTubeMessage(text));
+        if (tiktokConnected) sends.push(sendTikTokMessage(text));
         if (!sends.length) throw new Error("No chat platforms are ready to send.");
         await Promise.all(sends);
       }
@@ -790,17 +793,19 @@ useEffect(() => {
           <select value={sendTarget} onChange={(e) => setSendTarget(e.target.value)}>
             <option value="twitch">Twitch</option>
             <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
             <option value="both">Twitch + YouTube</option>
             <option value="all">All Sendable Platforms</option>
           </select>
           <input type="text" placeholder="Type your message..." value={chatInput}
             onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && canSend && sendSelectedMessage()} />
-          <button type="button" onClick={sendSelectedMessage} disabled={!canSend}>{sendTarget === "youtube" ? "Send to YouTube" : sendTarget === "twitch" ? "Send to Twitch" : "Send"}</button>
+          <button type="button" onClick={sendSelectedMessage} disabled={!canSend}>{sendTarget === "youtube" ? "Send to YouTube" : sendTarget === "twitch" ? "Send to Twitch" : sendTarget === "tiktok" ? "Send to TikTok" : "Send"}</button>
         </div>
       </section>
     </main>
   );
 }
+
 
 
 
