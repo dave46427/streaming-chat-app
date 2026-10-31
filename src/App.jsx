@@ -155,6 +155,8 @@ useEffect(() => {
     try {
       const data = JSON.parse(event.data);
 
+
+    console.log("STREAMBRIDGE RECEIVED:", data);
       if (data.type === "tiktok_status") {
         setTiktokConnected(Boolean(data.connected));
         setTiktokStatus(data.status || "TikTok status updated");
