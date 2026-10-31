@@ -34,6 +34,7 @@ function LiveChatScreen({
   youtubeStatus,
   tiktokStatus,
   sendTarget,
+  tiktokConnected,
   setSendTarget,
 }) {
   const chatEndRef = useRef(null);
@@ -700,6 +701,7 @@ useEffect(() => {
         tiktokStatus={tiktokStatus}
         sendTarget={sendTarget}
         setSendTarget={setSendTarget}
+        tiktokConnected={tiktokConnected}
       />
     );
   }
