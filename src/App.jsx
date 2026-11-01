@@ -199,7 +199,7 @@ export default function App() {
 
   const connectTikTok = () => { tiktokManualDisconnectRef.current = false; const username = tiktokUsername.trim().replace(/^@/, ""); if (!username) return setTiktokStatus("Enter a TikTok username first."); if (!tiktokSocketRef.current || tiktokSocketRef.current.readyState !== WebSocket.OPEN) return setTiktokStatus("TikTok server is not ready. Try again in a moment."); localStorage.setItem("tiktok_username", username); setTiktokUsername(username); setTiktokStatus(`Connecting to @${username}...`); tiktokSocketRef.current.send(JSON.stringify({ type: "connect_tiktok", username })); };
   const disconnectTikTok = () => { tiktokManualDisconnectRef.current = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current?.readyState === WebSocket.OPEN) tiktokSocketRef.current.send(JSON.stringify({ type: "disconnect_tiktok" })); setTiktokConnected(false); setTiktokStatus("Not connected"); };
-  const connectTwitch = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.removeItem("youtube_oauth_pending"); const redirectUri = window.location.origin + "/"; window.location.href = "https://id.twitch.tv/oauth2/authorize" + "?response_type=token" + `&client_id=${TWITCH_CLIENT_ID}` + `&redirect_uri=${encodeURIComponent(redirectUri)}` + "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true"; };
+  const connectTwitch = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.removeItem("youtube_oauth_pending"); const redirectUri = window.location.origin + "/"; window.location.href = "https://id.twitch.tv/oauth2/authorize" + "?response_type=token" + `&client_id=${TWITCH_CLIENT_ID}` + `&redirect_uri=${encodeURIComponent(redirectUri)}` + "&scope=user%3Aread%3Achat+user%3Awrite%3Achat+chat%3Aread+chat%3Aedit&force_verify=true"; };
   const connectYouTube = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); const state = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`; sessionStorage.setItem("youtube_oauth_pending", "true"); sessionStorage.setItem("youtube_oauth_state", state); const params = new URLSearchParams({ client_id: YOUTUBE_CLIENT_ID, redirect_uri: getYouTubeRedirectUri(), response_type: "token", scope: YOUTUBE_SCOPE, include_granted_scopes: "true", state, prompt: "consent" }); window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`; };
   const disconnectYouTube = () => { sessionStorage.removeItem("youtube_access_token"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); setYoutubeConnected(false); setYoutubeLiveChatId(""); setYoutubeStatus("Not connected"); clearTimeout(youtubePollTimerRef.current); };
   const chooseChannel = () => { try { const saved = saveTwitchChannel(twitchChannel); setTwitchChannel(saved); setActiveChannel(saved); setMessages([]); setTwitchStatus(`Channel saved: ${saved}. Connecting...`); } catch (error) { setTwitchStatus(error.message); } };
@@ -207,12 +207,143 @@ export default function App() {
   useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); sessionStorage.setItem("streambridge_setup_complete", "true"); setSetupComplete(true); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); sessionStorage.setItem("streambridge_setup_complete", "true"); setSetupComplete(true); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
 
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("twitch_access_token"); if (!savedToken) return; if (!activeChannel) { setTwitchConnected(true); setTwitchStatus("Twitch connected. Enter a channel name below."); return; } let cancelled = false;
-    const startTwitchChat = async () => { try { setTwitchStatus("Checking Twitch login..."); const validationResponse = await fetch("https://id.twitch.tv/oauth2/validate", { headers: { Authorization: `OAuth ${savedToken}` } }); if (!validationResponse.ok) throw new Error("Twitch login expired. Click Connect Twitch again."); const user = await validationResponse.json(); if (cancelled) return; const channelResponse = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(activeChannel)}`, { headers: { Authorization: `Bearer ${savedToken}`, "Client-Id": TWITCH_CLIENT_ID } }); if (!channelResponse.ok) throw new Error("Could not look up that Twitch channel."); const channelResult = await channelResponse.json(); const broadcaster = channelResult.data?.[0]; if (!broadcaster) throw new Error(`Twitch channel '${activeChannel}' was not found.`); setTwitchUser({ ...user, broadcaster_user_id: broadcaster.id }); setTwitchConnected(true); setTwitchStatus(`Connected as ${user.login}. Opening ${broadcaster.login}'s chat...`);
-      const openSocket = (url = "wss://eventsub.wss.twitch.tv/ws", isTwitchReconnect = false) => { const socket = new WebSocket(url); if (isTwitchReconnect) reconnectingSocketRef.current = socket; else socketRef.current = socket; socket.onmessage = async (messageEvent) => { try { const packet = JSON.parse(messageEvent.data); const messageType = packet.metadata?.message_type; if (messageType === "session_welcome") { const sessionId = packet.payload.session.id; if (isTwitchReconnect) { const oldSocket = socketRef.current; socketRef.current = socket; reconnectingSocketRef.current = null; reconnectUrlRef.current = null; setTwitchConnected(true); setTwitchStatus(`Listening to ${broadcaster.login}'s Twitch chat`); if (oldSocket && oldSocket !== socket) { oldSocket.onclose = null; oldSocket.close(); } return; } setTwitchStatus(`Subscribing to ${broadcaster.login}'s Twitch chat...`); const subscriptionResponse = await fetch("https://api.twitch.tv/helix/eventsub/subscriptions", { method: "POST", headers: { Authorization: `Bearer ${savedToken}`, "Client-Id": TWITCH_CLIENT_ID, "Content-Type": "application/json" }, body: JSON.stringify({ type: "channel.chat.message", version: "1", condition: { broadcaster_user_id: broadcaster.id, user_id: user.user_id }, transport: { method: "websocket", session_id: sessionId } }) }); if (!subscriptionResponse.ok) { const details = await subscriptionResponse.text(); throw new Error(`Twitch chat subscription failed: ${details}`); } setTwitchConnected(true); setTwitchStatus(`Listening to ${broadcaster.login}'s Twitch chat`); } if (messageType === "notification") { const event = packet.payload.event; const incomingId = packet.metadata.message_id; setMessages((current) => current.some((item) => item.id === incomingId) ? current : [...current, { id: incomingId, platform: "Twitch", username: event.chatter_user_name || event.chatter_user_login, text: event.message?.text || "" }].slice(-100)); } if (messageType === "session_reconnect") { const reconnectUrl = packet.payload.session?.reconnect_url; if (reconnectUrl && !reconnectingSocketRef.current) { reconnectUrlRef.current = reconnectUrl; setTwitchStatus("Twitch is reconnecting automatically..."); openSocket(reconnectUrl, true); } } if (messageType === "revocation") { setTwitchConnected(false); setTwitchStatus("Twitch chat permission was revoked. Connect Twitch again."); } } catch (error) { setTwitchStatus(error.message || "Twitch chat connection error"); } }; socket.onerror = () => setTwitchStatus("Twitch chat connection error. Reconnecting..."); socket.onclose = () => { if (cancelled) return; if (isTwitchReconnect) { reconnectingSocketRef.current = null; reconnectUrlRef.current = null; } if (socket !== socketRef.current && !isTwitchReconnect) return; setTwitchConnected(false); setTwitchStatus("Twitch chat disconnected. Reconnecting automatically..."); clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = setTimeout(() => { if (!cancelled) openSocket(); }, 2000); }; }; openSocket(); } catch (error) { setTwitchStatus(error.message || "Could not connect to Twitch chat"); } };
-    startTwitchChat(); return () => { cancelled = true; clearTimeout(reconnectTimerRef.current); reconnectUrlRef.current = null; if (reconnectingSocketRef.current) { reconnectingSocketRef.current.onclose = null; reconnectingSocketRef.current.close(); reconnectingSocketRef.current = null; } if (socketRef.current) { socketRef.current.onclose = null; socketRef.current.close(); socketRef.current = null; } };
-  }, [activeChannel]);
+    const savedToken = sessionStorage.getItem("twitch_access_token");
+    if (!savedToken) return;
+    if (!activeChannel) {
+      setTwitchConnected(true);
+      setTwitchStatus("Twitch connected. Enter a channel name below.");
+      return;
+    }
 
+    let cancelled = false;
+    let reconnectAttempts = 0;
+
+    const decodeTwitchTag = (value) => String(value || "");
+
+    const parseTags = (rawTags) => Object.fromEntries(
+      String(rawTags || "")
+        .split(";")
+        .filter(Boolean)
+        .map((tag) => {
+          const separator = tag.indexOf("=");
+          if (separator === -1) return [tag, ""];
+          return [tag.slice(0, separator), decodeTwitchTag(tag.slice(separator + 1))];
+        })
+    );
+
+    const openTwitchChat = async () => {
+      try {
+        setTwitchStatus("Checking Twitch login...");
+        const validationResponse = await fetch("https://id.twitch.tv/oauth2/validate", {
+          headers: { Authorization: `OAuth ${savedToken}` },
+        });
+        if (!validationResponse.ok) {
+          throw new Error("Twitch login expired. Click Reconnect Twitch.");
+        }
+
+        const user = await validationResponse.json();
+        if (cancelled) return;
+
+        const channelResponse = await fetch(
+          `https://api.twitch.tv/helix/users?login=${encodeURIComponent(activeChannel)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${savedToken}`,
+              "Client-Id": TWITCH_CLIENT_ID,
+            },
+          }
+        );
+        if (!channelResponse.ok) throw new Error("Could not look up that Twitch channel.");
+
+        const channelResult = await channelResponse.json();
+        const broadcaster = channelResult.data?.[0];
+        if (!broadcaster) throw new Error(`Twitch channel '${activeChannel}' was not found.`);
+        if (cancelled) return;
+
+        setTwitchUser({ ...user, broadcaster_user_id: broadcaster.id });
+        setTwitchStatus(`Opening ${broadcaster.login}'s Twitch chat...`);
+
+        const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+        socketRef.current = socket;
+
+        socket.onopen = () => {
+          reconnectAttempts = 0;
+          socket.send("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n");
+          socket.send(`PASS oauth:${savedToken}\r\n`);
+          socket.send(`NICK ${user.login}\r\n`);
+          socket.send(`JOIN #${broadcaster.login.toLowerCase()}\r\n`);
+          setTwitchConnected(true);
+          setTwitchStatus(`Listening to ${broadcaster.login}'s Twitch chat`);
+        };
+
+        socket.onmessage = (messageEvent) => {
+          const lines = String(messageEvent.data || "").split("\r\n").filter(Boolean);
+
+          for (const line of lines) {
+            if (line.startsWith("PING")) {
+              socket.send(line.replace(/^PING/, "PONG") + "\r\n");
+              continue;
+            }
+
+            if (line.includes("Login authentication failed") || line.includes("Improperly formatted auth")) {
+              setTwitchConnected(false);
+              setTwitchStatus("Twitch login permission is missing. Click Reconnect Twitch.");
+              continue;
+            }
+
+            const match = line.match(/^@([^ ]+) :([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.*)$/);
+            if (!match) continue;
+
+            const tags = parseTags(match[1]);
+            const username = tags["display-name"] || match[2] || "Twitch viewer";
+            const text = cleanChatText(match[3]);
+            if (!text) continue;
+
+            const incomingId = tags.id || `twitch-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            setMessages((current) => current.some((item) => item.id === incomingId)
+              ? current
+              : [...current, {
+                  id: incomingId,
+                  platform: "Twitch",
+                  username: cleanChatText(username).slice(0, 80),
+                  text,
+                }].slice(-100));
+          }
+        };
+
+        socket.onerror = () => {
+          setTwitchStatus("Twitch chat connection error. Reconnecting...");
+        };
+
+        socket.onclose = () => {
+          if (cancelled || socket !== socketRef.current) return;
+          setTwitchConnected(false);
+          reconnectAttempts += 1;
+          const delay = Math.min(10000, 1500 * reconnectAttempts);
+          setTwitchStatus("Twitch chat disconnected. Reconnecting automatically...");
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            if (!cancelled) openTwitchChat();
+          }, delay);
+        };
+      } catch (error) {
+        setTwitchConnected(false);
+        setTwitchStatus(error.message || "Could not connect to Twitch chat");
+      }
+    };
+
+    openTwitchChat();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(reconnectTimerRef.current);
+      if (socketRef.current) {
+        socketRef.current.onclose = null;
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+    };
+  }, [activeChannel]);
   useEffect(() => { const token = sessionStorage.getItem("youtube_access_token"); if (!token) return; let cancelled = false; setYoutubeConnected(true); const apiFetch = async (path, options = {}) => { const response = await fetch(`${YOUTUBE_API}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); if (response.status === 401) throw new Error("YouTube login expired. Connect YouTube again."); if (!response.ok) { const details = await response.text(); throw new Error(details || "YouTube request failed."); } return response.json(); }; const pollMessages = async (liveChatId) => { if (cancelled) return; try { const params = new URLSearchParams({ part: "id,snippet,authorDetails", liveChatId, maxResults: "200" }); if (youtubeNextPageTokenRef.current) params.set("pageToken", youtubeNextPageTokenRef.current); const data = await apiFetch(`/liveChat/messages?${params.toString()}`); youtubeNextPageTokenRef.current = data.nextPageToken || youtubeNextPageTokenRef.current; const incoming = (data.items || []).filter((item) => item.snippet?.hasDisplayContent).map((item) => ({ id: `youtube-${item.id}`, platform: "YouTube", username: item.authorDetails?.displayName || "YouTube viewer", text: item.snippet?.displayMessage || "" })); if (incoming.length) setMessages((current) => { const known = new Set(current.map((item) => item.id)); return [...current, ...incoming.filter((item) => !known.has(item.id))].slice(-100); }); setYoutubeStatus("Listening to YouTube live chat"); youtubePollTimerRef.current = setTimeout(() => pollMessages(liveChatId), Math.max(data.pollingIntervalMillis || 5000, 2000)); } catch (error) { setYoutubeStatus(error.message || "YouTube chat connection error"); if (!cancelled) youtubePollTimerRef.current = setTimeout(() => pollMessages(liveChatId), 10000); } }; const startYouTubeChat = async () => { try { setYoutubeStatus("Looking for an active YouTube live broadcast..."); const data = await apiFetch("/liveBroadcasts?part=snippet&broadcastStatus=active&broadcastType=all&maxResults=5"); const broadcast = (data.items || []).find((item) => item.snippet?.liveChatId); const liveChatId = broadcast?.snippet?.liveChatId; if (!liveChatId) { setYoutubeLiveChatId(""); setYoutubeStatus("Connected, but no active YouTube live chat was found. Start a YouTube live broadcast, then reconnect."); return; } setYoutubeLiveChatId(liveChatId); youtubeNextPageTokenRef.current = ""; setYoutubeStatus(`Opening YouTube chat: ${broadcast.snippet?.title || "live broadcast"}`); pollMessages(liveChatId); } catch (error) { setYoutubeConnected(false); setYoutubeStatus(error.message || "Could not connect to YouTube chat"); } }; startYouTubeChat(); return () => { cancelled = true; clearTimeout(youtubePollTimerRef.current); }; }, [youtubeConnected]);
 
   const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("twitch_access_token"); if (!text || !token || !twitchUser?.broadcaster_user_id) throw new Error("Twitch is not ready to send."); const response = await fetch("https://api.twitch.tv/helix/chat/messages", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Client-Id": TWITCH_CLIENT_ID, "Content-Type": "application/json" }, body: JSON.stringify({ broadcaster_id: twitchUser.broadcaster_user_id, sender_id: twitchUser.user_id, message: text }) }); const result = await response.json(); if (!response.ok || !result.data?.[0]?.is_sent) throw new Error(result.data?.[0]?.drop_reason?.message || "Twitch message was not sent"); };
