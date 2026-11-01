@@ -1,13 +1,33 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+
+    VitePWA({
+      registerType: "autoUpdate",
+
+      manifest: {
+        name: "StreamBridge",
+        short_name: "StreamBridge",
+        description: "Combined live streaming chat for multiple platforms",
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#080d1c",
+        theme_color: "#6c4cff"
+      }
+    })
+  ],
+
   server: {
     allowedHosts: [
       "streaming-chat-app-tu3j.onrender.com",
       "streaming-chat-app-production-dc88.up.railway.app"
     ],
+
     proxy: {
       "/ws": {
         target: "ws://localhost:3000",
