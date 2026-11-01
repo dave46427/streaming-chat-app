@@ -170,9 +170,9 @@ connection.on(WebcastEvent.CHAT, (data) => {
   sendJson(socket, {
     type: "chat_message",
     message: {
-      id: `tiktok-${data?.msgId || Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}`,
+      // Use TikTok's own message ID when available so repeated delivery of
+      // the same CHAT event keeps the same ID in the StreamBridge client.
+      id: `tiktok-${data?.msgId || `${sender}-${messageText}`}`,
       platform: "TikTok",
       username: sender,
       text: messageText,
