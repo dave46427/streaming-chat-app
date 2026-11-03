@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
+import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
 import { YOUTUBE_CLIENT_ID, YOUTUBE_SCOPE, getYouTubeRedirectUri } from "./youtubeConfig";
 
@@ -94,6 +95,7 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
 }
 
 export default function App() {
+  const [startupFinished, setStartupFinished] = useState(false);
   const [ageVerified, setAgeVerified] = useState(() => sessionStorage.getItem("streambridge_age_verified") === "true");
   const [safetyPage, setSafetyPage] = useState("");
   const [entryStarted, setEntryStarted] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || window.location.hash.includes("access_token="));
@@ -476,6 +478,10 @@ export default function App() {
       </main>
     );
   }
+  if (!startupFinished) {
+    return <StartupScreen onContinue={() => setStartupFinished(true)} />;
+  }
+
   if (!ageVerified) return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", background: "radial-gradient(circle at top, #27304f, #080c18 65%)", color: "white", fontFamily: "Arial, sans-serif" }}>
       <section style={{ width: "min(560px, 100%)", textAlign: "center", background: "rgba(17,24,49,.96)", border: "2px solid #fecaca", borderRadius: 24, padding: 30, boxShadow: "0 24px 70px rgba(0,0,0,.45)" }}>

@@ -21,8 +21,6 @@ const DIST_FOLDER = path.join(__dirname, "dist");
 const EULER_API_KEY =
   process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
 
-  const TIKTOK_SESSION_ID = process.env.TIKTOK_SESSION_ID || "";
-const TIKTOK_TARGET_IDC = process.env.TIKTOK_TARGET_IDC || "";
 if (EULER_API_KEY) {
   SignConfig.apiKey = EULER_API_KEY;
   console.log("Euler Stream API key loaded.");
@@ -97,7 +95,6 @@ async function disconnectTikTok(socket) {
 }
 
 async function connectTikTok(socket, usernameValue) {
-console.log("TikTok connect request received:", usernameValue);
   const username = cleanTikTokUsername(usernameValue);
 
   if (!username) {
@@ -126,59 +123,42 @@ console.log("TikTok connect request received:", usernameValue);
     status: `Connecting to @${username}'s TikTok LIVE...`,
   });
 
+  const options = {
+    processInitialData: false,
+    enableExtendedGiftInfo: false,
+  };
 
+  const connection = new TikTokLiveConnection(username, options);
 
+  socket.tiktokConnection = connection;
+  socket.tiktokUsername = username;
 
- const options = {
-  processInitialData: true,
-  enableExtendedGiftInfo: false,
-  session: {
-    cookie: {
-      type: "cookie",
-      value: {
-        sessionId: TIKTOK_SESSION_ID,
-        ttTargetIdc: TIKTOK_TARGET_IDC,
+  connection.on(WebcastEvent.CHAT, (data) => {
+    const messageText = String(data?.comment || "").trim();
+
+    if (!messageText) {
+      return;
+    }
+
+    const sender =
+      data?.user?.uniqueId ||
+      data?.user?.nickname ||
+      data?.user?.userId ||
+      "TikTok viewer";
+
+    sendJson(socket, {
+      type: "chat_message",
+      message: {
+        id: `tiktok-${data?.msgId || Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}`,
+        platform: "TikTok",
+        username: sender,
+        text: messageText,
       },
-    },
-  },
-};
-
-const connection = new TikTokLiveConnection(username, options);
-
-connection.on(WebcastEvent.MEMBER, (data) => {
-  console.log("TikTok MEMBER event received:", data?.user?.uniqueId);
-});
-
-socket.tiktokConnection = connection;
-socket.tiktokUsername = username;
-
-connection.on(WebcastEvent.CHAT, (data) => {
-  console.log(`TikTok chat received: ${data?.user?.uniqueId || "Unknown"}: ${data?.comment || data?.content || ""}`);
-
-  const messageText = String(data?.comment || data?.content || "").trim();
-
-  if (!messageText) {
-    return;
-  }
-
-  const sender =
-    data?.user?.uniqueId ||
-    data?.user?.nickname ||
-    data?.user?.userId ||
-    "TikTok viewer";
-
-  sendJson(socket, {
-    type: "chat_message",
-    message: {
-      // Use TikTok's own message ID when available so repeated delivery of
-      // the same CHAT event keeps the same ID in the StreamBridge client.
-      id: `tiktok-${data?.msgId || `${sender}-${messageText}`}`,
-      platform: "TikTok",
-      username: sender,
-      text: messageText,
-    },
+    });
   });
-});
+
   connection.on(WebcastEvent.DISCONNECTED, () => {
     if (socket.tiktokConnection !== connection) {
       return;
@@ -222,10 +202,7 @@ connection.on(WebcastEvent.CHAT, (data) => {
 
   try {
     const state = await connection.connect();
-console.log(
-  `TikTok connected successfully to @${username}. Room ID:`,
-  state?.roomId || connection.roomId || "unknown"
-);
+
     if (socket.tiktokConnection !== connection) {
       await connection.disconnect().catch(() => {});
       return;
@@ -282,49 +259,7 @@ websocketServer.on("connection", (socket) => {
         await connectTikTok(socket, command.username);
         return;
       }
-if (command.type === "send_tiktok_message") {
-  const text = String(command.text || "").trim();
 
-  if (!text) {
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      status: "Enter a TikTok message first.",
-    });
-    return;
-  }
-
-  if (!socket.tiktokConnection) {
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      status: "TikTok is not connected.",
-    });
-    return;
-  }
-
-  try {
-    await socket.tiktokConnection.sendMessage(text);
-
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: true,
-      status: "TikTok message sent.",
-    });
-  } catch (error) {
-    console.error("TikTok send error:", error);
-
-    sendJson(socket, {
-      type: "tiktok_send_status",
-      sent: false,
-      status: `TikTok send failed: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    });
-  }
-
-  return;
-}
       if (command.type === "disconnect_tiktok") {
         await disconnectTikTok(socket);
 
