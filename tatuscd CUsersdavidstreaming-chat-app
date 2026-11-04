@@ -1,0 +1,28 @@
+warning: in the working copy of 'src/App.jsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/App.jsx b/src/App.jsx[m
+[1mindex cda2707..617ffe1 100644[m
+[1m--- a/src/App.jsx[m
+[1m+++ b/src/App.jsx[m
+[36m@@ -96,7 +96,7 @@[m [mfunction LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,[m
+ export default function App() {[m
+   const [ageVerified, setAgeVerified] = useState(() => sessionStorage.getItem("streambridge_age_verified") === "true");[m
+   const [safetyPage, setSafetyPage] = useState("");[m
+[31m-  const [entryStarted, setEntryStarted] = useState(false);[m
+[32m+[m[32m  const [entryStarted, setEntryStarted] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || window.location.hash.includes("access_token="));[m
+   const [appBackground, setAppBackground] = useState(() => localStorage.getItem("streambridge_app_background") || "");[m
+   const [setupComplete, setSetupComplete] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true");[m
+   const [language, setLanguage] = useState("English");[m
+[36m@@ -145,7 +145,7 @@[m [mexport default function App() {[m
+   const [twitchChannel, setTwitchChannel] = useState(() => getSavedTwitchChannel()); const [activeChannel, setActiveChannel] = useState(() => getSavedTwitchChannel());[m
+   const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState("");[m
+   const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected");[m
+[31m-  const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);[m
+[32m+[m[32m  const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(() => window.location.hash.includes("access_token="));[m
+   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");[m
+   const recentTikTokMessagesRef = useRef(new Map());[m
+   const tiktokReconnectTimerRef = useRef(null);[m
+[36m@@ -316,3 +316,4 @@[m [mexport default function App() {[m
+ [m
+ [m
+ [m
+[41m+[m

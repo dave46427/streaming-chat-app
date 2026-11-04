@@ -96,7 +96,8 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
 
 export default function App() {
   const [startupFinished, setStartupFinished] = useState(false);
-  const [ageVerified, setAgeVerified] = useState(() => sessionStorage.getItem("streambridge_age_verified") === "true");
+  const [ageVerified, setAgeVerified] = useState(() => localStorage.getItem("streambridge_age_verified") === "true");
+  const [ageAgreementChecked, setAgeAgreementChecked] = useState(false);
   const [safetyPage, setSafetyPage] = useState("");
   const [entryStarted, setEntryStarted] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || window.location.hash.includes("access_token="));
   const [appBackground, setAppBackground] = useState(() => localStorage.getItem("streambridge_app_background") || "");
@@ -440,7 +441,7 @@ export default function App() {
         title: "Privacy Notice",
         paragraphs: [
           "StreamBridge is an adults-only streaming control and combined-chat application.",
-          "The age screen currently records only a temporary 18+ confirmation in this browser session. StreamBridge does not request a date of birth, identity document or biometric information for this confirmation.",
+          "The age screen stores an 18+ confirmation in this browser on this device so the screen does not appear again after confirmation. StreamBridge does not request a date of birth, identity document or biometric information for this confirmation.",
           "Platform access tokens and preferences used by this version are stored in browser session or local storage. Do not use StreamBridge on a shared or public device.",
           "Connected platforms process account and chat information under their own privacy terms. StreamBridge should publish complete business contact, retention, deletion and user-rights information before public release.",
           "This draft notice is product text, not a substitute for a reviewed legal privacy policy."
@@ -483,23 +484,30 @@ export default function App() {
   }
 
   if (!ageVerified) return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", background: "radial-gradient(circle at top, #27304f, #080c18 65%)", color: "white", fontFamily: "Arial, sans-serif" }}>
-      <section style={{ width: "min(560px, 100%)", textAlign: "center", background: "rgba(17,24,49,.96)", border: "2px solid #fecaca", borderRadius: 24, padding: 30, boxShadow: "0 24px 70px rgba(0,0,0,.45)" }}>
-        <div style={{ fontSize: "3rem" }}>{"\u{1F51E}"}</div>
-        <h1 style={{ marginBottom: 8 }}>Age confirmation required</h1>
-        <p style={{ color: "#cbd5e1", lineHeight: 1.6 }}>StreamBridge is intended only for people aged 18 or over. Confirm your age to continue.</p>
-        <button type="button" onClick={() => { sessionStorage.setItem("streambridge_age_verified", "true"); setAgeVerified(true); }} style={{ ...liveButtonStyle, width: "100%", marginTop: 14, padding: 15, background: "#b91c1c", fontSize: "1.05rem" }}>I CONFIRM I AM 18 OR OVER</button>
-        <button type="button" onClick={() => { window.location.href = "about:blank"; }} style={{ ...liveButtonStyle, width: "100%", marginTop: 10, background: "#374151" }}>I AM UNDER 18</button>
-        <p style={{ marginTop: 16, color: "#94a3b8", fontSize: ".82rem" }}>This is an age self-confirmation gate, not identity or ID verification.</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
-          <button type="button" onClick={() => setSafetyPage("privacy")} style={{ border: 0, background: "transparent", color: "#c4b5fd", textDecoration: "underline", cursor: "pointer" }}>Privacy Notice</button>
-          <button type="button" onClick={() => setSafetyPage("terms")} style={{ border: 0, background: "transparent", color: "#c4b5fd", textDecoration: "underline", cursor: "pointer" }}>Terms of Use</button>
-          <button type="button" onClick={() => setSafetyPage("safety")} style={{ border: 0, background: "transparent", color: "#c4b5fd", textDecoration: "underline", cursor: "pointer" }}>Safety and Child Protection</button>
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", background: "radial-gradient(circle at 50% 10%, rgba(124,58,237,.28), transparent 34%), linear-gradient(145deg, #070912 0%, #0b1020 48%, #080b16 100%)", color: "white", fontFamily: "Arial, sans-serif" }}>
+      <section style={{ width: "min(540px, 100%)", textAlign: "center", background: "rgba(12,17,34,.94)", border: "1px solid rgba(167,139,250,.55)", borderRadius: 28, padding: "36px 30px", boxShadow: "0 0 35px rgba(124,58,237,.18), 0 28px 80px rgba(0,0,0,.55)", backdropFilter: "blur(16px)" }}>
+        <div style={{ width: 88, height: 88, margin: "0 auto 22px", display: "grid", placeItems: "center", borderRadius: "50%", background: "linear-gradient(135deg, rgba(124,58,237,.28), rgba(37,99,235,.22))", border: "2px solid #8b5cf6", boxShadow: "0 0 30px rgba(139,92,246,.4)", fontSize: "2rem", fontWeight: 900 }}>18+</div>
+        <p style={{ margin: "0 0 8px", color: "#a78bfa", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>STREAMBRIDGE</p>
+        <h1 style={{ margin: "0 0 14px", fontSize: "clamp(1.8rem, 6vw, 2.5rem)", lineHeight: 1.12 }}>Age & Safety</h1>
+        <p style={{ color: "#cbd5e1", lineHeight: 1.65, margin: "0 auto 10px", maxWidth: 440 }}>StreamBridge is intended for adults aged 18 or over.</p>
+        <p style={{ color: "#94a3b8", lineHeight: 1.55, margin: "0 auto 26px", maxWidth: 440, fontSize: ".92rem" }}>Please confirm that you are 18 or older before continuing.</p>
+               <label style={{ display: "flex", gap: 12, alignItems: "flex-start", textAlign: "left", padding: "14px 16px", margin: "0 0 14px", borderRadius: 14, background: "rgba(255,255,255,.04)", border: "1px solid rgba(167,139,250,.28)", color: "#dbe4f3", lineHeight: 1.5, cursor: "pointer" }}>
+          <input type="checkbox" checked={ageAgreementChecked} onChange={(event) => setAgeAgreementChecked(event.target.checked)} style={{ marginTop: 4, width: 18, height: 18, accentColor: "#7c3aed", flex: "0 0 auto" }} />
+          <span>I confirm that I am 18 or over. I understand that StreamBridge is an 18+ service only, and I agree to the Terms of Use and Privacy Notice.</span>
+        </label>
+        <p style={{ color: "#94a3b8", lineHeight: 1.5, margin: "0 auto 14px", maxWidth: 440, fontSize: ".82rem" }}>By continuing, you confirm that you meet the 18+ age requirement.</p>
+        <button type="button" disabled={!ageAgreementChecked} onClick={() => { if (!ageAgreementChecked) return; localStorage.setItem("streambridge_age_verified", "true"); setAgeVerified(true); }} style={{ width: "100%", border: 0, borderRadius: 14, padding: "16px 18px", color: "white", fontSize: "1rem", fontWeight: 900, cursor: ageAgreementChecked ? "pointer" : "not-allowed", background: ageAgreementChecked ? "linear-gradient(135deg, #7c3aed, #2563eb)" : "#475569", opacity: ageAgreementChecked ? 1 : 0.6, boxShadow: ageAgreementChecked ? "0 10px 30px rgba(124,58,237,.35)" : "none" }}>I am 18 or over</button>
+        <button type="button" onClick={() => { window.location.href = "about:blank"; }} style={{ width: "100%", marginTop: 11, borderRadius: 14, padding: "14px 18px", color: "#cbd5e1", fontSize: ".95rem", fontWeight: 700, cursor: "pointer", background: "rgba(255,255,255,.04)", border: "1px solid rgba(148,163,184,.25)" }}>I am under 18</button>
+        <div style={{ height: 1, background: "rgba(148,163,184,.15)", margin: "26px 0 20px" }} />
+        <p style={{ color: "#64748b", fontSize: ".78rem", lineHeight: 1.5, margin: "0 0 16px" }}>Your 18+ confirmation is remembered on this device.</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
+          <button type="button" onClick={() => setSafetyPage("privacy")} style={{ border: 0, padding: 0, background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: ".82rem" }}>Privacy</button>
+          <button type="button" onClick={() => setSafetyPage("terms")} style={{ border: 0, padding: 0, background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: ".82rem" }}>Terms</button>
+          <button type="button" onClick={() => setSafetyPage("safety")} style={{ border: 0, padding: 0, background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: ".82rem" }}>Safety</button>
         </div>
       </section>
     </main>
   );
-
   if (!entryStarted) return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", color: "white", fontFamily: "Arial, sans-serif", background: appBackground ? `linear-gradient(rgba(11,16,32,.68), rgba(11,16,32,.68)), url(${appBackground}) center / cover fixed` : "radial-gradient(circle at top, #27304f, #080c18 65%)" }}>
       <section style={{ width: "min(680px, 100%)", textAlign: "center", background: "rgba(17,24,49,.9)", border: `1px solid ${accentColor}`, borderRadius: 28, padding: 36, boxShadow: "0 26px 80px rgba(0,0,0,.5)" }}>
@@ -529,6 +537,9 @@ export default function App() {
 
 
 }
+
+
+
 
 
 
