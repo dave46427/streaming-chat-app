@@ -95,7 +95,8 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
 }
 
 export default function App() {
-  const [startupFinished, setStartupFinished] = useState(false);
+  const [startupFinished, setStartupFinished] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || window.location.hash.includes("access_token="));
+
   const [ageVerified, setAgeVerified] = useState(() => localStorage.getItem("streambridge_age_verified") === "true");
   const [ageAgreementChecked, setAgeAgreementChecked] = useState(false);
   const [safetyPage, setSafetyPage] = useState("");
