@@ -64,3 +64,24 @@ select{background:#080c12;color:#fff;border:1px solid #334155;border-radius:10px
     cursor: pointer;
   }
 }
+/* StreamBridge dark platform dropdown fix */
+#send-target {
+  background-color: #151d36 !important;
+  color: #ffffff !important;
+  border: 1px solid #384261 !important;
+  border-radius: 10px !important;
+  padding: 10px 36px 10px 12px !important;
+  font-weight: 700;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+#send-target option {
+  background-color: #151d36;
+  color: #ffffff;
+}
+
+#send-target:focus {
+  outline: 2px solid #7357ff;
+  outline-offset: 2px;
+}
