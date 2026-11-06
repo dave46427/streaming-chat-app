@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -98,14 +98,19 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
 }
 
 export default function App() {
-  const [startupFinished, setStartupFinished] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || window.location.hash.includes("access_token="));
+  const [startupFinished, setStartupFinished] = useState(() =>
+    localStorage.getItem("streambridge_setup_complete") === "true" ||
+    sessionStorage.getItem("streambridge_setup_complete") === "true" ||
+    sessionStorage.getItem("streambridge_setup_in_progress") === "true" ||
+    window.location.hash.includes("access_token=")
+  );
 
   const [ageVerified, setAgeVerified] = useState(() => localStorage.getItem("streambridge_age_verified") === "true");
   const [ageAgreementChecked, setAgeAgreementChecked] = useState(false);
   const [safetyPage, setSafetyPage] = useState("");
-  const [entryStarted, setEntryStarted] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || window.location.hash.includes("access_token="));
+  const [entryStarted, setEntryStarted] = useState(true);
   const [appBackground, setAppBackground] = useState(() => localStorage.getItem("streambridge_app_background") || "");
-  const [setupComplete, setSetupComplete] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true");
+  const [setupComplete, setSetupComplete] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || localStorage.getItem("streambridge_setup_complete") === "true");
   const detectLanguage = () => navigator.languages?.[0] || navigator.language || document.documentElement.lang || "en-GB";
   const [language, setLanguage] = useState(detectLanguage);
   useEffect(() => {
@@ -179,7 +184,7 @@ export default function App() {
   const [twitchChannel, setTwitchChannel] = useState(() => getSavedTwitchChannel()); const [activeChannel, setActiveChannel] = useState(() => getSavedTwitchChannel());
   const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState("");
   const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected");
-  const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(() => window.location.hash.includes("access_token="));
+  const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");
   const recentTikTokMessagesRef = useRef(new Map());
   const tiktokReconnectTimerRef = useRef(null);
@@ -233,12 +238,12 @@ export default function App() {
 
   const connectTikTok = () => { tiktokManualDisconnectRef.current = false; const username = tiktokUsername.trim().replace(/^@/, ""); if (!username) return setTiktokStatus("Enter a TikTok username first."); if (!tiktokSocketRef.current || tiktokSocketRef.current.readyState !== WebSocket.OPEN) return setTiktokStatus("TikTok server is not ready. Try again in a moment."); localStorage.setItem("tiktok_username", username); setTiktokUsername(username); setTiktokStatus(`Connecting to @${username}...`); tiktokSocketRef.current.send(JSON.stringify({ type: "connect_tiktok", username })); };
   const disconnectTikTok = () => { tiktokManualDisconnectRef.current = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current?.readyState === WebSocket.OPEN) tiktokSocketRef.current.send(JSON.stringify({ type: "disconnect_tiktok" })); setTiktokConnected(false); setTiktokStatus("Not connected"); };
-  const connectTwitch = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.removeItem("youtube_oauth_pending"); const redirectUri = window.location.origin + "/"; window.location.href = "https://id.twitch.tv/oauth2/authorize" + "?response_type=token" + `&client_id=${TWITCH_CLIENT_ID}` + `&redirect_uri=${encodeURIComponent(redirectUri)}` + "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true"; };
-  const connectYouTube = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); const state = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`; sessionStorage.setItem("youtube_oauth_pending", "true"); sessionStorage.setItem("youtube_oauth_state", state); const params = new URLSearchParams({ client_id: YOUTUBE_CLIENT_ID, redirect_uri: getYouTubeRedirectUri(), response_type: "token", scope: YOUTUBE_SCOPE, include_granted_scopes: "true", state, prompt: "consent" }); window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`; };
+  const connectTwitch = () => { sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); sessionStorage.removeItem("youtube_oauth_pending"); const redirectUri = window.location.origin + "/"; window.location.href = "https://id.twitch.tv/oauth2/authorize" + "?response_type=token" + `&client_id=${TWITCH_CLIENT_ID}` + `&redirect_uri=${encodeURIComponent(redirectUri)}` + "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true"; };
+  const connectYouTube = () => { sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); const state = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`; sessionStorage.setItem("youtube_oauth_pending", "true"); sessionStorage.setItem("youtube_oauth_state", state); const params = new URLSearchParams({ client_id: YOUTUBE_CLIENT_ID, redirect_uri: getYouTubeRedirectUri(), response_type: "token", scope: YOUTUBE_SCOPE, include_granted_scopes: "true", state, prompt: "consent" }); window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`; };
   const disconnectYouTube = () => { sessionStorage.removeItem("youtube_access_token"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); setYoutubeConnected(false); setYoutubeLiveChatId(""); setYoutubeStatus("Not connected"); clearTimeout(youtubePollTimerRef.current); };
   const chooseChannel = () => { try { const saved = saveTwitchChannel(twitchChannel); setTwitchChannel(saved); setActiveChannel(saved); setMessages([]); setTwitchStatus(`Channel saved: ${saved}. Connecting...`); } catch (error) { setTwitchStatus(error.message); } };
 
-  useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); sessionStorage.setItem("streambridge_setup_complete", "true"); setSetupComplete(true); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); sessionStorage.setItem("streambridge_setup_complete", "true"); setSetupComplete(true); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
+  useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
 
   useEffect(() => {
     const savedToken = sessionStorage.getItem("twitch_access_token");
@@ -511,7 +516,7 @@ export default function App() {
     );
   }
   if (!startupFinished) {
-    return <StartupScreen onContinue={() => setStartupFinished(true)} />;
+    return <StartupScreen onContinue={() => setStartupFinished(true)} onSkipSetup={() => { localStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.removeItem("streambridge_setup_in_progress"); setStartupFinished(true); setSetupComplete(true); }} />;
   }
 
   if (!ageVerified) return (
@@ -539,48 +544,251 @@ export default function App() {
       </section>
     </main>
   );
-  if (!entryStarted) return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", color: "white", fontFamily: "Arial, sans-serif", background: appBackground ? `linear-gradient(rgba(11,16,32,.68), rgba(11,16,32,.68)), url(${appBackground}) center / cover fixed` : "radial-gradient(circle at top, #27304f, #080c18 65%)" }}>
-      <section style={{ width: "min(680px, 100%)", textAlign: "center", background: "rgba(17,24,49,.9)", border: `1px solid ${accentColor}`, borderRadius: 28, padding: 36, boxShadow: "0 26px 80px rgba(0,0,0,.5)" }}>
-        <p style={{ color: "#70f0a0", fontWeight: 900, letterSpacing: 2 }}>STREAMBRIDGE</p>
-        <h1 style={{ fontSize: "clamp(2.2rem, 8vw, 4.8rem)", margin: "8px 0" }}>One chat. Every audience.</h1>
-        <p style={{ color: "#cbd5e1", fontSize: "1.08rem" }}>Connect your platforms, open the combined chat and manage your live audience in one place.</p>
-        <button type="button" onClick={() => setEntryStarted(true)} style={{ ...liveButtonStyle, width: "100%", marginTop: 18, padding: 18, background: accentColor, fontSize: "1.25rem" }}>GO LIVE</button>
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginTop: 15 }}>
-          <button type="button" onClick={() => setSafetyPage("privacy")} style={{ border: 0, background: "transparent", color: "#c4b5fd", textDecoration: "underline", cursor: "pointer" }}>Privacy</button>
-          <button type="button" onClick={() => setSafetyPage("terms")} style={{ border: 0, background: "transparent", color: "#c4b5fd", textDecoration: "underline", cursor: "pointer" }}>Terms</button>
-          <button type="button" onClick={() => setSafetyPage("safety")} style={{ border: 0, background: "transparent", color: "#c4b5fd", textDecoration: "underline", cursor: "pointer" }}>Safety</button>
+  if (!setupComplete) {
+    const twitchAuthorised = Boolean(sessionStorage.getItem("twitch_access_token"));
+    const youtubeAuthorised = Boolean(sessionStorage.getItem("youtube_access_token"));
+
+    const completeSetup = (openChat = true) => {
+      localStorage.setItem("streambridge_setup_complete", "true");
+      sessionStorage.setItem("streambridge_setup_complete", "true");
+      sessionStorage.removeItem("streambridge_setup_in_progress");
+      setSetupComplete(true);
+      setShowLiveChat(openChat);
+    };
+
+    const platformCard = {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 16,
+      padding: "18px 20px",
+      borderRadius: 18,
+      border: "1px solid rgba(103,232,249,.24)",
+      background: "linear-gradient(145deg, rgba(20,30,55,.96), rgba(8,13,28,.96))",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,.08), 0 12px 28px rgba(0,0,0,.28)",
+      flexWrap: "wrap"
+    };
+    const connectionButton = {
+      ...themedButtonStyle,
+      minWidth: 130,
+      padding: "12px 18px"
+    };
+    const badge = (connected) => ({
+      minWidth: 130,
+      padding: "10px 14px",
+      borderRadius: 999,
+      textAlign: "center",
+      fontWeight: 900,
+      color: connected ? "#86efac" : "#94a3b8",
+      border: connected ? "1px solid rgba(74,222,128,.65)" : "1px solid rgba(148,163,184,.3)",
+      background: connected ? "rgba(34,197,94,.14)" : "rgba(148,163,184,.08)"
+    });
+
+    return (
+      <main style={{ minHeight: "100vh", width: "100%", maxWidth: "none", margin: 0, padding: "24px 16px", boxSizing: "border-box", display: "grid", placeItems: "center", background: "radial-gradient(circle at 50% 0%, rgba(14,165,233,.20), transparent 34%), linear-gradient(145deg, #050914 0%, #081225 50%, #040712 100%)", color: "white", fontFamily: "Arial, sans-serif" }}>
+        <section style={{ width: "min(780px, 100%)", padding: "clamp(20px, 4vw, 36px)", borderRadius: 28, border: "1px solid rgba(34,211,238,.45)", background: "rgba(5,10,24,.95)", boxShadow: "0 0 45px rgba(34,211,238,.12), 0 30px 90px rgba(0,0,0,.58)", boxSizing: "border-box" }}>
+          <header style={{ display: "block", textAlign: "center", marginBottom: 26 }}>
+            <p style={{ margin: "0 0 8px", color: "#67e8f9", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>STREAMBRIDGE</p>
+            <h1 style={{ margin: "0 0 10px", fontSize: "clamp(2rem, 7vw, 3.2rem)", lineHeight: 1.05 }}>Connect Platforms</h1>
+            <p style={{ margin: "0 auto", maxWidth: 590, color: "#b8c5db", lineHeight: 1.6 }}>Connect the platforms you want StreamBridge to bring together. You can change connections later in Settings.</p>
+          </header>
+
+          <div style={{ display: "grid", gap: 14 }}>
+            <article style={platformCard}>
+              <div style={{ flex: "1 1 260px" }}>
+                <strong style={{ fontSize: "1.08rem" }}>Twitch</strong>
+                <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Send and receive Twitch chat</div>
+                {twitchAuthorised && !activeChannel && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <input type="text" aria-label="Twitch channel name" placeholder="Twitch channel name" value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} onKeyDown={(event) => event.key === "Enter" && chooseChannel()} style={{ flex: "1 1 200px", padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(148,163,184,.35)", background: "#070d1b", color: "white" }} />
+                    <button type="button" onClick={chooseChannel} style={connectionButton}>SAVE CHANNEL</button>
+                  </div>
+                )}
+                {twitchAuthorised && <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>{twitchStatus}</div>}
+              </div>
+              {twitchAuthorised ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectTwitch} style={connectionButton}>CONNECT</button>}
+            </article>
+
+            <article style={platformCard}>
+              <div><strong style={{ fontSize: "1.08rem" }}>YouTube</strong><div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Send and receive YouTube live chat</div></div>
+              {youtubeAuthorised ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectYouTube} style={connectionButton}>CONNECT</button>}
+            </article>
+
+            <article style={platformCard}>
+              <div style={{ flex: "1 1 260px" }}>
+                <strong style={{ fontSize: "1.08rem" }}>TikTok</strong>
+                <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Receive TikTok live messages</div>
+                {!tiktokConnected && <input type="text" aria-label="TikTok username" placeholder="TikTok username" value={tiktokUsername} onChange={(event) => setTiktokUsername(cleanChatText(event.target.value).replace(/^@/, ""))} style={{ width: "100%", maxWidth: 300, marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(148,163,184,.35)", background: "#070d1b", color: "white", boxSizing: "border-box" }} />}
+                <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>{tiktokStatus}</div>
+              </div>
+              {tiktokConnected ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectTikTok} style={connectionButton}>CONNECT</button>}
+            </article>
+
+            {["Facebook Live / Meta", "Kick", "Mixcloud"].map((name) => (
+              <article style={platformCard} key={name}>
+                <div><strong style={{ fontSize: "1.08rem" }}>{name}</strong><div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div></div>
+                <div style={badge(false)}>COMING SOON</div>
+              </article>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 11, marginTop: 24 }}>
+            <button type="button" onClick={() => completeSetup(true)} style={{ ...themedButtonStyle, width: "100%", padding: "16px 20px", fontSize: "1rem" }}>CONTINUE TO COMBINED CHAT</button>
+            <button type="button" onClick={() => completeSetup(false)} style={{ width: "100%", border: "1px solid rgba(148,163,184,.28)", borderRadius: 14, padding: "13px 18px", color: "#cbd5e1", background: "rgba(15,23,42,.7)", fontWeight: 800, cursor: "pointer" }}>SKIP SETUP FOR NOW</button>
+          </div>
+          <p style={{ margin: "18px 0 0", color: "#64748b", textAlign: "center", fontSize: ".78rem" }}>Connected platforms and ordinary preferences are remembered on this device.</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+
+  const openConnections = () => {
+    localStorage.removeItem("streambridge_setup_complete");
+    sessionStorage.removeItem("streambridge_setup_complete");
+    sessionStorage.setItem("streambridge_setup_in_progress", "true");
+    setSetupComplete(false);
+    setShowLiveChat(false);
+  };
+
+  const connectedCount = [
+    Boolean(sessionStorage.getItem("twitch_access_token")),
+    Boolean(sessionStorage.getItem("youtube_access_token")),
+    tiktokConnected,
+  ].filter(Boolean).length;
+
+  const homeCard = {
+    width: "min(920px, 100%)",
+    border: `1px solid ${lighterAccent}88`,
+    borderRadius: 28,
+    padding: "clamp(22px, 5vw, 46px)",
+    background: "linear-gradient(145deg, rgba(10,16,36,.96), rgba(4,8,20,.97))",
+    boxShadow: `0 0 45px ${accentColor}22, 0 30px 90px rgba(0,0,0,.58)`,
+    boxSizing: "border-box",
+  };
+
+  const secondaryButtonStyle = {
+    width: "100%",
+    border: "1px solid rgba(148,163,184,.32)",
+    borderRadius: 14,
+    padding: "15px 20px",
+    color: "#e2e8f0",
+    background: "linear-gradient(180deg, rgba(30,41,59,.92), rgba(10,15,29,.96))",
+    fontWeight: 900,
+    fontSize: "1rem",
+    cursor: "pointer",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,.10), 0 7px 16px rgba(0,0,0,.30)",
+  };
+
+  return (
+    <main style={{
+      minHeight: "100vh",
+      width: "100%",
+      padding: "24px 16px",
+      boxSizing: "border-box",
+      display: "grid",
+      placeItems: "center",
+      background: appBackground
+        ? `linear-gradient(rgba(4,8,20,.76), rgba(4,8,20,.82)), url(${appBackground}) center / cover fixed`
+        : themedPageBackground,
+      color: highContrast ? "#fff" : (theme === "light" ? "#111827" : "white"),
+      fontFamily: "Arial, sans-serif",
+      fontSize: largeText ? "125%" : "100%",
+    }}>
+      <section style={homeCard}>
+        <header style={{ textAlign: "center", marginBottom: 30 }}>
+          <img
+            src="/streambridge-logo.png"
+            alt="StreamBridge"
+            style={{ width: 96, height: 96, objectFit: "contain", borderRadius: 22, marginBottom: 16 }}
+          />
+          <p style={{ margin: "0 0 10px", color: lighterAccent, fontWeight: 900, letterSpacing: 4, fontSize: ".78rem" }}>
+            STREAMBRIDGE
+          </p>
+          <h1 style={{ margin: "0 0 12px", fontSize: "clamp(2.25rem, 8vw, 4.5rem)", lineHeight: 1.02 }}>
+            All your chats. One place.
+          </h1>
+          <p style={{ margin: "0 auto", maxWidth: 620, color: theme === "light" ? "#475569" : "#b8c5db", lineHeight: 1.65, fontSize: "1.05rem" }}>
+            Connect your platforms and bring your communities together.
+          </p>
+        </header>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 18 }}>
+          <button type="button" onClick={openConnections} style={{ ...themedButtonStyle, width: "100%", padding: "17px 20px", fontSize: "1rem" }}>
+            CONNECT ALL
+          </button>
+          <button type="button" onClick={() => setShowLiveChat(true)} style={secondaryButtonStyle}>
+            COMBINED CHAT
+          </button>
         </div>
-        <div style={{ marginTop: 18, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-          <label style={{ ...liveButtonStyle, display: "inline-block", background: "#27304f" }}>Add app background<input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAppBackgroundChange} style={{ display: "none" }} /></label>
-          {appBackground && <button type="button" onClick={clearAppBackground} style={{ ...liveButtonStyle, background: "#4b2330" }}>Remove app background</button>}
+
+        <div role="status" aria-live="polite" style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: 22,
+          color: "#94a3b8",
+          fontSize: ".86rem",
+        }}>
+          <span>{connectedCount} of 3 current chat connections ready</span>
+          <span aria-hidden="true">•</span>
+          <span>Twitch: {twitchConnected ? "Connected" : "Not connected"}</span>
+          <span aria-hidden="true">•</span>
+          <span>YouTube: {youtubeConnected ? "Connected" : "Not connected"}</span>
+          <span aria-hidden="true">•</span>
+          <span>TikTok: {tiktokConnected ? "Connected" : "Not connected"}</span>
         </div>
+
+        <details style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 18, background: "rgba(15,23,42,.66)", overflow: "hidden" }}>
+          <summary style={{ padding: "17px 20px", cursor: "pointer", fontWeight: 900, listStylePosition: "inside" }}>
+            SETTINGS & APPEARANCE
+          </summary>
+          <div style={{ padding: "0 20px 22px", display: "grid", gap: 18 }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+              <label><b>Theme </b>
+                <select value={theme} onChange={(event) => changeTheme(event.target.value)}>
+                  <option value="dark">Dark</option>
+                  <option value="purple">Neon Purple</option>
+                  <option value="blue">Electric Blue</option>
+                  <option value="fire">Red / Orange</option>
+                  <option value="green">Cyber Green</option>
+                  <option value="light">Light</option>
+                </select>
+              </label>
+              <label><b>Pick your colour </b>
+                <input type="color" value={accentColor} onChange={(event) => { setAccentColor(event.target.value); localStorage.setItem("streambridge_accent", event.target.value); }} />
+              </label>
+              <label style={{ ...themedButtonStyle, display: "inline-block" }}>
+                Add app background
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAppBackgroundChange} style={{ display: "none" }} />
+              </label>
+              {appBackground && <button type="button" onClick={clearAppBackground} style={secondaryButtonStyle}>Remove app background</button>}
+            </div>
+
+            <fieldset style={{ borderRadius: 14, border: `1px solid ${accentColor}66`, padding: 16 }}>
+              <legend><b>Accessibility</b></legend>
+              <label><input type="checkbox" checked={largeText} onChange={(event) => { setLargeText(event.target.checked); localStorage.setItem("streambridge_large_text", String(event.target.checked)); }} /> Large text</label><br />
+              <label><input type="checkbox" checked={highContrast} onChange={(event) => { setHighContrast(event.target.checked); localStorage.setItem("streambridge_high_contrast", String(event.target.checked)); }} /> High contrast</label><br />
+              <label><input type="checkbox" checked={announceMessages} onChange={(event) => { setAnnounceMessages(event.target.checked); localStorage.setItem("streambridge_announce_messages", String(event.target.checked)); }} /> Read new chat messages aloud</label>
+            </fieldset>
+
+            <fieldset style={{ borderRadius: 14, border: `1px solid ${accentColor}66`, padding: 16 }}>
+              <legend><b>Chat colours</b></legend>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+                <label>Twitch <input type="color" value={twitchMessageColor} onChange={(event) => { setTwitchMessageColor(event.target.value); localStorage.setItem("streambridge_twitch_message_color", event.target.value); }} /></label>
+                <label>YouTube <input type="color" value={youtubeMessageColor} onChange={(event) => { setYoutubeMessageColor(event.target.value); localStorage.setItem("streambridge_youtube_message_color", event.target.value); }} /></label>
+                <label>TikTok <input type="color" value={tiktokMessageColor} onChange={(event) => { setTiktokMessageColor(event.target.value); localStorage.setItem("streambridge_tiktok_message_color", event.target.value); }} /></label>
+                <label>Message box <input type="color" value={messageBackgroundColor} onChange={(event) => { setMessageBackgroundColor(event.target.value); localStorage.setItem("streambridge_message_background_color", event.target.value); }} /></label>
+                <label>Message text <input type="color" value={messageTextColor} onChange={(event) => { setMessageTextColor(event.target.value); localStorage.setItem("streambridge_message_text_color", event.target.value); }} /></label>
+              </div>
+            </fieldset>
+
+            <button type="button" onClick={openConnections} style={secondaryButtonStyle}>MANAGE PLATFORM CONNECTIONS</button>
+          </div>
+        </details>
       </section>
     </main>
   );
-
-  if (!setupComplete) return <main style={{ background: appBackground ? `linear-gradient(rgba(11,16,32,.72), rgba(11,16,32,.72)), url(${appBackground}) center / cover fixed` : themedPageBackground, color: appBackground ? "white" : (theme === "light" ? "#111827" : undefined), minHeight: "100vh" }}><section className="hero"><h1>Welcome to Streambridge</h1><div role="note" aria-label="StreamBridge is for adults age 18 and over" style={{ background: "#b91c1c", color: "white", border: "2px solid #fecaca", padding: "12px 16px", borderRadius: 12, fontWeight: 900, fontSize: "1.25rem", margin: "12px 0" }}>{"\uD83D\uDD1E"} 18+ ONLY</div><p>Let's set up your stream.</p><p>Language: <strong>Auto detect ({language})</strong></p><p>Theme: <select value={theme} onChange={(e) => changeTheme(e.target.value)}><option value="dark">Dark</option><option value="purple">Neon Purple</option><option value="blue">Electric Blue</option><option value="fire">Red / Orange</option><option value="green">Cyber Green</option><option value="light">Light</option></select></p><p>Pick your colour: <input aria-label="Pick accent colour" type="color" value={accentColor} onChange={(e) => { setAccentColor(e.target.value); localStorage.setItem("streambridge_accent", e.target.value); }} /></p><fieldset><legend>Accessibility</legend><label><input type="checkbox" checked={largeText} onChange={(e) => { setLargeText(e.target.checked); localStorage.setItem("streambridge_large_text", String(e.target.checked)); }} /> Large text</label><br /><label><input type="checkbox" checked={highContrast} onChange={(e) => { setHighContrast(e.target.checked); localStorage.setItem("streambridge_high_contrast", String(e.target.checked)); }} /> High contrast</label><br /><label><input type="checkbox" checked={announceMessages} onChange={(e) => { setAnnounceMessages(e.target.checked); localStorage.setItem("streambridge_announce_messages", String(e.target.checked)); }} /> Read new chat messages aloud</label></fieldset><p>Platforms:</p><div className="grid">{platforms.map((p) => <label className="card" key={p.id}><input type="checkbox" checked={p.enabled} onChange={(e) => update(p.id, { enabled: e.target.checked })} /> {p.name}</label>)}</div><button className="go" disabled={enabled.length === 0} onClick={finishSetup} style={enabled.length === 0 ? undefined : themedButtonStyle}>Start setup</button></section></main>;
-  if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
-  return <main style={{ background: appBackground ? `linear-gradient(rgba(11,16,32,.72), rgba(11,16,32,.72)), url(${appBackground}) center / cover fixed` : themedPageBackground, color: appBackground ? "white" : (highContrast ? "#fff" : (theme === "light" ? "#111827" : undefined)), minHeight: "100vh", fontSize: largeText ? "125%" : "100%" }}><header><div style={{ display: "flex", alignItems: "center", gap: 14 }}><img src="/streambridge-logo.png" alt="StreamBridge" style={{ width: 76, height: 76, objectFit: "contain", borderRadius: 16, flexShrink: 0 }} /><div><h1 style={{ margin: 0 }}>StreamBridge</h1><p style={{ margin: "4px 0 0" }}>One input. Every audience.</p></div></div><span className="badge" role="note" aria-label="StreamBridge is for adults age 18 and over" style={{ background: "#b91c1c", color: "white", border: "2px solid #fecaca", padding: "10px 14px", borderRadius: 999, fontWeight: 900 }}>{"\uD83D\uDD1E"} 18+ ONLY {"\u2022"} READY</span></header><section className="hero"><p className="eyebrow">CLOUD MULTISTREAM CONTROL</p><h2>Stream everywhere. Manage everything in one place.</h2><p>This dashboard prepares your streaming destinations. A streaming relay backend is still required for real simultaneous broadcasting.</p><button className={live ? "stop" : "go"} onClick={() => ready && setLive(!live)} style={ready ? themedButtonStyle : { ...themedButtonStyle, opacity: 0.5, cursor: "not-allowed" }}>{live ? "Stop broadcast" : "Go live everywhere"}</button>{!ready && <small>Connect your platforms to enable streaming.</small>}</section><div className="bar"><h2>Streaming destinations</h2></div><section className="grid">{platforms.map((p) => <article className="card" key={p.id}><div className="row"><strong>{p.name}</strong><input type="checkbox" checked={p.enabled} onChange={(e) => update(p.id, { enabled: e.target.checked })} /></div></article>)}</section><section className="note" style={{ border: `1px solid ${accentColor}`, borderRadius: 20, boxShadow: `0 16px 40px ${accentColor}22`, padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}><div><div style={{ fontSize: "1.35rem", fontWeight: 900 }}>StreamBridge Control Center</div><small>Connections, appearance and accessibility</small></div><button type="button" className="go" style={themedButtonStyle} onClick={() => setShowLiveChat(true)}>OPEN LIVE CHAT</button></div><div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "12px 0" }}><label><b>Theme </b><select value={theme} onChange={(e) => changeTheme(e.target.value)}><option value="dark">Dark</option><option value="purple">Neon Purple</option><option value="blue">Electric Blue</option><option value="fire">Red / Orange</option><option value="green">Cyber Green</option><option value="light">Light</option></select></label><label><b>Pick your colour </b><input type="color" value={accentColor} onChange={(e) => { setAccentColor(e.target.value); localStorage.setItem("streambridge_accent", e.target.value); }} /></label><strong role="note" aria-label="StreamBridge is for adults age 18 and over" style={{ background: "#b91c1c", color: "white", padding: "8px 12px", borderRadius: 999 }}>{"\uD83D\uDD1E"} 18+ ONLY</strong><label style={{ ...liveButtonStyle, ...themedButtonStyle, display: "inline-block" }}>Add app background<input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAppBackgroundChange} style={{ display: "none" }} /></label>{appBackground && <button type="button" onClick={clearAppBackground}>Remove app background</button>}</div><fieldset style={{ margin: "12px 0" }}><legend><b>Accessibility</b></legend><label><input type="checkbox" checked={largeText} onChange={(e) => { setLargeText(e.target.checked); localStorage.setItem("streambridge_large_text", String(e.target.checked)); }} /> Large text</label><br /><label><input type="checkbox" checked={highContrast} onChange={(e) => { setHighContrast(e.target.checked); localStorage.setItem("streambridge_high_contrast", String(e.target.checked)); }} /> High contrast</label><br /><label><input type="checkbox" checked={announceMessages} onChange={(e) => { setAnnounceMessages(e.target.checked); localStorage.setItem("streambridge_announce_messages", String(e.target.checked)); }} /> Read new chat messages aloud</label><p>Keyboard shortcut: Alt + L focuses the Live Chat message box.</p></fieldset><fieldset style={{ margin: "12px 0", borderRadius: 12, borderColor: accentColor }}><legend><b>Message colour setup</b></legend><div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}><label>Twitch <input type="color" value={twitchMessageColor} onChange={(e) => { setTwitchMessageColor(e.target.value); localStorage.setItem("streambridge_twitch_message_color", e.target.value); }} /></label><label>YouTube <input type="color" value={youtubeMessageColor} onChange={(e) => { setYoutubeMessageColor(e.target.value); localStorage.setItem("streambridge_youtube_message_color", e.target.value); }} /></label><label>TikTok <input type="color" value={tiktokMessageColor} onChange={(e) => { setTiktokMessageColor(e.target.value); localStorage.setItem("streambridge_tiktok_message_color", e.target.value); }} /></label><label>Message box <input type="color" value={messageBackgroundColor} onChange={(e) => { setMessageBackgroundColor(e.target.value); localStorage.setItem("streambridge_message_background_color", e.target.value); }} /></label><label>Message text <input type="color" value={messageTextColor} onChange={(e) => { setMessageTextColor(e.target.value); localStorage.setItem("streambridge_message_text_color", e.target.value); }} /></label></div><p style={{ marginBottom: 0, color: "#aeb8d4" }}>These colours are saved on this device and used for incoming messages in Combined Chat.</p></fieldset><div style={{ margin: "12px 0" }}><label htmlFor="twitch-channel"><b>Twitch channel name</b></label><div><input id="twitch-channel" type="text" placeholder="Example: yourchannelname" value={twitchChannel} onChange={(e) => setTwitchChannel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && chooseChannel()} /><button type="button" onClick={chooseChannel} style={themedButtonStyle}>Save channel</button></div></div><p><b>Twitch:</b> {twitchStatus}</p><p><b>YouTube:</b> {youtubeStatus}</p><div style={{ margin: "12px 0" }}><label htmlFor="tiktok-username"><b>TikTok username</b></label><div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}><input id="tiktok-username" type="text" placeholder="Example: yourusername" value={tiktokUsername} onChange={(e) => setTiktokUsername(cleanChatText(e.target.value).replace(/^@/, ""))} onKeyDown={(e) => { if (e.key === "Enter") connectTikTok(); }} /><button type="button" onClick={connectTikTok} style={themedButtonStyle}>{tiktokConnected ? "Reconnect TikTok" : "Connect TikTok"}</button>{tiktokConnected && <button type="button" onClick={disconnectTikTok} style={themedButtonStyle}>Disconnect TikTok</button>}</div></div><p><b>TikTok:</b> {tiktokStatus}</p><div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}><button type="button" onClick={connectTwitch} style={themedButtonStyle}>{twitchConnected ? "Reconnect Twitch" : "Connect Twitch"}</button><button type="button" onClick={connectYouTube} style={themedButtonStyle}>{youtubeConnected ? "Reconnect YouTube" : "Connect YouTube"}</button>{youtubeConnected && <button type="button" onClick={disconnectYouTube} style={themedButtonStyle}>Disconnect YouTube</button>}</div><p style={{ color: "#aeb8d4" }}>Live messages appear only in the large Live Chat screen.</p></section></main>;
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
