@@ -85,3 +85,17 @@ select{background:#080c12;color:#fff;border:1px solid #334155;border-radius:10px
   outline: 2px solid #7357ff;
   outline-offset: 2px;
 }
+
+/* StreamBridge startup must always fill the whole viewport */
+main.sb-startup {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
