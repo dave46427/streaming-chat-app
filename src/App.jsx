@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -243,7 +243,7 @@ export default function App() {
   const disconnectYouTube = () => { sessionStorage.removeItem("youtube_access_token"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); setYoutubeConnected(false); setYoutubeLiveChatId(""); setYoutubeStatus("Not connected"); clearTimeout(youtubePollTimerRef.current); };
   const chooseChannel = () => { try { const saved = saveTwitchChannel(twitchChannel); setTwitchChannel(saved); setActiveChannel(saved); setMessages([]); setTwitchStatus(`Channel saved: ${saved}. Connecting...`); } catch (error) { setTwitchStatus(error.message); } };
 
-  useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
+  useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); localStorage.setItem("streambridge_youtube_configured", "true"); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); localStorage.setItem("streambridge_twitch_configured", "true"); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
 
   useEffect(() => {
     const savedToken = sessionStorage.getItem("twitch_access_token");
@@ -644,6 +644,65 @@ export default function App() {
 
   if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
+  const connectAll = () => {
+    const twitchToken = sessionStorage.getItem("twitch_access_token");
+    const youtubeToken = sessionStorage.getItem("youtube_access_token");
+    const savedTikTokUsername = localStorage.getItem("tiktok_username") || "";
+    const twitchConfigured =
+      localStorage.getItem("streambridge_twitch_configured") === "true" ||
+      Boolean(twitchToken) ||
+      Boolean(activeChannel);
+    const youtubeConfigured =
+      localStorage.getItem("streambridge_youtube_configured") === "true" ||
+      Boolean(youtubeToken);
+
+    if (twitchToken && activeChannel) {
+      setTwitchStatus(`Reconnecting to ${activeChannel}'s Twitch chat...`);
+      setActiveChannel("");
+      window.setTimeout(() => setActiveChannel(activeChannel), 50);
+    } else if (twitchConfigured) {
+      setTwitchStatus("Twitch is remembered. Sign in again to renew the connection.");
+    }
+
+    if (youtubeToken) {
+      clearTimeout(youtubePollTimerRef.current);
+      youtubeNextPageTokenRef.current = "";
+      setYoutubeStatus("Reconnecting to YouTube and checking for a live chat...");
+      setYoutubeConnected(false);
+      window.setTimeout(() => setYoutubeConnected(true), 50);
+    } else if (youtubeConfigured) {
+      setYoutubeStatus("YouTube is remembered. Sign in again to renew the connection.");
+    }
+
+    if (savedTikTokUsername) {
+      tiktokManualDisconnectRef.current = false;
+      setTiktokUsername(savedTikTokUsername);
+
+      if (tiktokSocketRef.current?.readyState === WebSocket.OPEN) {
+        setTiktokStatus(`Connecting to @${savedTikTokUsername}...`);
+        tiktokSocketRef.current.send(JSON.stringify({
+          type: "connect_tiktok",
+          username: savedTikTokUsername,
+        }));
+      } else {
+        setTiktokStatus(`TikTok @${savedTikTokUsername} is remembered. Waiting for the server...`);
+      }
+    }
+
+    const needsTwitchLogin = twitchConfigured && !twitchToken;
+    const needsYouTubeLogin = youtubeConfigured && !youtubeToken;
+    const nothingConfigured =
+      !twitchConfigured &&
+      !youtubeConfigured &&
+      !savedTikTokUsername;
+
+    if (nothingConfigured) {
+  openConnections();
+  return;
+}
+
+    setShowLiveChat(true);
+  };
   const openConnections = () => {
     localStorage.removeItem("streambridge_setup_complete");
     sessionStorage.removeItem("streambridge_setup_complete");
@@ -715,7 +774,7 @@ export default function App() {
         </header>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 18 }}>
-          <button type="button" onClick={openConnections} style={{ ...themedButtonStyle, width: "100%", padding: "17px 20px", fontSize: "1rem" }}>
+          <button type="button" onClick={connectAll} style={{ ...themedButtonStyle, width: "100%", padding: "17px 20px", fontSize: "1rem" }}>
             CONNECT ALL
           </button>
           <button type="button" onClick={() => setShowLiveChat(true)} style={secondaryButtonStyle}>
@@ -733,11 +792,11 @@ export default function App() {
           fontSize: ".86rem",
         }}>
           <span>{connectedCount} of 3 current chat connections ready</span>
-          <span aria-hidden="true">•</span>
+          <span aria-hidden="true">â€¢</span>
           <span>Twitch: {twitchConnected ? "Connected" : "Not connected"}</span>
-          <span aria-hidden="true">•</span>
+          <span aria-hidden="true">â€¢</span>
           <span>YouTube: {youtubeConnected ? "Connected" : "Not connected"}</span>
-          <span aria-hidden="true">•</span>
+          <span aria-hidden="true">â€¢</span>
           <span>TikTok: {tiktokConnected ? "Connected" : "Not connected"}</span>
         </div>
 
@@ -792,3 +851,4 @@ export default function App() {
     </main>
   );
 }
+
