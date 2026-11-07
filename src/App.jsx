@@ -792,11 +792,11 @@ export default function App() {
           fontSize: ".86rem",
         }}>
           <span>{connectedCount} of 3 current chat connections ready</span>
-          <span aria-hidden="true">â€¢</span>
+          <span aria-hidden="true">&bull;</span>
           <span>Twitch: {twitchConnected ? "Connected" : "Not connected"}</span>
-          <span aria-hidden="true">â€¢</span>
+          <span aria-hidden="true">&bull;</span>
           <span>YouTube: {youtubeConnected ? "Connected" : "Not connected"}</span>
-          <span aria-hidden="true">â€¢</span>
+          <span aria-hidden="true">&bull;</span>
           <span>TikTok: {tiktokConnected ? "Connected" : "Not connected"}</span>
         </div>
 
@@ -851,4 +851,5 @@ export default function App() {
     </main>
   );
 }
+
 
