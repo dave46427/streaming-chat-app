@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
 import crypto from "node:crypto";
@@ -500,6 +500,7 @@ data?.roomInfo?.userCount ??
   });
 
   connection.on(WebcastEvent.GIFT, (data) => {
+    console.log("TIKTOK GIFT EVENT RECEIVED:", JSON.stringify(data, null, 2));
     const giftUsername =
       data?.user?.displayId ||
       data?.user?.uniqueId ||
