@@ -134,7 +134,7 @@ async function connectTikTok(socket, usernameValue) {
   socket.tiktokUsername = username;
 
   connection.on(WebcastEvent.CHAT, (data) => {
-    const messageText = String(data?.comment || "").trim();
+    const messageText = String(data?.content || data?.comment || "").trim();
 
     if (!messageText) {
       return;
@@ -159,6 +159,41 @@ async function connectTikTok(socket, usernameValue) {
     });
   });
 
+connection.on(WebcastEvent.MEMBER, (data) => {
+  const username =
+    data?.user?.displayId ||
+    data?.user?.nickname ||
+    data?.user?.userId ||
+    "TikTok viewer";
+
+  sendJson(socket, {
+    type: "tiktok_join",
+    username,
+  });
+});
+
+connection.on(WebcastEvent.LIKE, (data) => {
+  const username =
+    data?.user?.displayId ||
+    data?.user?.nickname ||
+    data?.user?.userId ||
+    "TikTok viewer";
+
+  sendJson(socket, {
+    type: "tiktok_like",
+    username,
+    count: Number(data?.count || 0),
+    total: Number(data?.total || 0),
+  });
+});
+  connection.on(WebcastEvent.ROOM_USER, (data) => {
+    const viewerCount = Number(data?.total || 0);
+
+    sendJson(socket, {
+      type: "tiktok_viewers",
+      viewers: viewerCount,
+    });
+  });
   connection.on(WebcastEvent.DISCONNECTED, () => {
     if (socket.tiktokConnection !== connection) {
       return;

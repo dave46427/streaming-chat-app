@@ -183,7 +183,7 @@ export default function App() {
   const [twitchConnected, setTwitchConnected] = useState(false); const [twitchStatus, setTwitchStatus] = useState("Not connected"); const [twitchUser, setTwitchUser] = useState(null);
   const [twitchChannel, setTwitchChannel] = useState(() => getSavedTwitchChannel()); const [activeChannel, setActiveChannel] = useState(() => getSavedTwitchChannel());
   const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState("");
-  const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected");
+    const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected"); const [tiktokViewers, setTiktokViewers] = useState(0);
   const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");
   const recentTikTokMessagesRef = useRef(new Map());
@@ -208,8 +208,33 @@ export default function App() {
       socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === "tiktok_status") { setTiktokConnected(Boolean(data.connected)); setTiktokStatus(data.status || "TikTok status updated"); }
+          if (data.type === "tiktok_viewers")
+  setTiktokViewers(Number(data.viewers || 0));
+{ setTiktokConnected(Boolean(data.connected)); setTiktokStatus(data.status || "TikTok status updated"); }
           if (data.type === "tiktok_send_status") setTiktokStatus(data.sent ? "TikTok message sent." : (String(data.status || "").includes("Premium") ? "Incoming TikTok chat is working. Sending replies requires Premium." : data.status || "TikTok message was not sent."));
+if (data.type === "tiktok_join") {
+  setMessages((current) => [
+    ...current,
+    {
+      id: `tiktok-join-${Date.now()}-${Math.random()}`,
+      platform: "TikTok",
+      username: cleanChatText(data.username || "TikTok viewer"),
+      text: "👋 joined the LIVE",
+    },
+  ].slice(-100));
+}
+if (data.type === "tiktok_like") {
+  setMessages((current) => [
+    ...current,
+    {
+      id: `tiktok-like-${Date.now()}-${Math.random()}`,
+      platform: "TikTok",
+      username: cleanChatText(data.username || "TikTok viewer"),
+      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
+    },
+  ].slice(-100));
+}
+
           if (data.type === "chat_message" && data.message) {
             const msg = { ...data.message, username: cleanChatText(data.message.username).slice(0, 80), text: cleanChatText(data.message.text) };
             const fingerprint = `${msg.platform}|${msg.username}`.toLowerCase() + `|${msg.text}`.toLowerCase();
