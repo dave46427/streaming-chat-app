@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer, WebSocket } from "ws";
@@ -18,8 +19,37 @@ const server = createServer(app);
 
 const PORT = Number(process.env.PORT || 3000);
 const DIST_FOLDER = path.join(__dirname, "dist");
+
 const EULER_API_KEY =
   process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
+
+const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
+const FACEBOOK_APP_SECRET = String(
+  process.env.FACEBOOK_APP_SECRET || ""
+).trim();
+
+const FACEBOOK_REDIRECT_URI =
+  process.env.FACEBOOK_REDIRECT_URI ||
+  "https://streaming-chat-app-production-dc88.up.railway.app/auth/facebook/callback";
+
+const FACEBOOK_GRAPH_VERSION =
+  process.env.FACEBOOK_GRAPH_VERSION || "v25.0";
+
+/*
+ * Facebook connection information is temporarily held in server memory.
+ * A later production step can move this into an encrypted database.
+ */
+const facebookLoginStates = new Map();
+
+let facebookConnection = {
+  connected: false,
+  userAccessToken: "",
+  userId: "",
+  userName: "",
+  pages: [],
+  connectedAt: "",
+  error: "",
+};
 
 if (EULER_API_KEY) {
   SignConfig.apiKey = EULER_API_KEY;
@@ -30,14 +60,264 @@ if (EULER_API_KEY) {
   );
 }
 
+if (FACEBOOK_APP_ID && FACEBOOK_APP_SECRET) {
+  console.log("Facebook App ID and App Secret loaded.");
+} else {
+  console.warn(
+    "Facebook credentials were not found. Add FACEBOOK_APP_ID and FACEBOOK_APP_SECRET."
+  );
+}
+
 app.disable("x-powered-by");
 app.use(express.json());
+
+function publicFacebookConnection() {
+  return {
+    connected: facebookConnection.connected,
+    userId: facebookConnection.userId,
+    userName: facebookConnection.userName,
+    connectedAt: facebookConnection.connectedAt,
+    error: facebookConnection.error,
+    pages: facebookConnection.pages.map((page) => ({
+      id: page.id,
+      name: page.name,
+      category: page.category || "",
+      tasks: Array.isArray(page.tasks) ? page.tasks : [],
+    })),
+  };
+}
+
+function removeExpiredFacebookStates() {
+  const now = Date.now();
+
+  for (const [state, createdAt] of facebookLoginStates.entries()) {
+    if (now - createdAt > 10 * 60 * 1000) {
+      facebookLoginStates.delete(state);
+    }
+  }
+}
+
+async function readFacebookJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data?.error) {
+    const message =
+      data?.error?.message ||
+      data?.error_description ||
+      `Facebook returned HTTP ${response.status}.`;
+
+    throw new Error(message);
+  }
+
+  return data;
+}
 
 app.get("/api/health", (request, response) => {
   response.json({
     ok: true,
     service: "StreamBridge",
     eulerApiKeyLoaded: Boolean(EULER_API_KEY),
+    facebookCredentialsLoaded: Boolean(
+      FACEBOOK_APP_ID && FACEBOOK_APP_SECRET
+    ),
+    facebookConnected: facebookConnection.connected,
+  });
+});
+
+/*
+ * Starts the Facebook OAuth login.
+ */
+app.get("/auth/facebook", (request, response) => {
+  if (!FACEBOOK_APP_ID || !FACEBOOK_APP_SECRET) {
+    return response.status(503).json({
+      ok: false,
+      error:
+        "Facebook is not configured. Add FACEBOOK_APP_ID and FACEBOOK_APP_SECRET.",
+    });
+  }
+
+  removeExpiredFacebookStates();
+
+  const state = crypto.randomBytes(32).toString("hex");
+  facebookLoginStates.set(state, Date.now());
+
+  const loginUrl = new URL(
+    `https://www.facebook.com/${FACEBOOK_GRAPH_VERSION}/dialog/oauth`
+  );
+
+  loginUrl.searchParams.set("client_id", FACEBOOK_APP_ID);
+  loginUrl.searchParams.set("redirect_uri", FACEBOOK_REDIRECT_URI);
+  loginUrl.searchParams.set("state", state);
+  loginUrl.searchParams.set("response_type", "code");
+  loginUrl.searchParams.set(
+    "scope",
+    [
+      "public_profile",
+      "pages_show_list",
+      "pages_read_engagement",
+      "pages_read_user_content",
+    ].join(",")
+  );
+
+  return response.redirect(loginUrl.toString());
+});
+
+/*
+ * Facebook redirects back here after login.
+ * The authorization code is exchanged for a user access token server-side.
+ */
+app.get("/auth/facebook/callback", async (request, response) => {
+  const code = String(request.query.code || "");
+  const state = String(request.query.state || "");
+  const oauthError = String(request.query.error || "");
+  const oauthErrorDescription = String(
+    request.query.error_description || ""
+  );
+
+  removeExpiredFacebookStates();
+
+  if (oauthError) {
+    facebookConnection.error =
+      oauthErrorDescription || "Facebook login was cancelled.";
+
+    return response.redirect(
+      `/?facebook=error&message=${encodeURIComponent(
+        facebookConnection.error
+      )}`
+    );
+  }
+
+  if (!state || !facebookLoginStates.has(state)) {
+    facebookConnection.error =
+      "Facebook login could not be verified. Please try connecting again.";
+
+    return response.redirect(
+      `/?facebook=error&message=${encodeURIComponent(
+        facebookConnection.error
+      )}`
+    );
+  }
+
+  facebookLoginStates.delete(state);
+
+  if (!code) {
+    facebookConnection.error =
+      "Facebook did not return an authorization code.";
+
+    return response.redirect(
+      `/?facebook=error&message=${encodeURIComponent(
+        facebookConnection.error
+      )}`
+    );
+  }
+
+  try {
+    const tokenUrl = new URL(
+      `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token`
+    );
+
+    tokenUrl.searchParams.set("client_id", FACEBOOK_APP_ID);
+    tokenUrl.searchParams.set("client_secret", FACEBOOK_APP_SECRET);
+    tokenUrl.searchParams.set("redirect_uri", FACEBOOK_REDIRECT_URI);
+    tokenUrl.searchParams.set("code", code);
+
+    const tokenData = await readFacebookJson(tokenUrl.toString());
+    const userAccessToken = String(tokenData.access_token || "");
+
+    if (!userAccessToken) {
+      throw new Error("Facebook did not return an access token.");
+    }
+
+    const profileUrl = new URL(
+      `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me`
+    );
+
+    profileUrl.searchParams.set("fields", "id,name");
+    profileUrl.searchParams.set("access_token", userAccessToken);
+
+    const profileData = await readFacebookJson(profileUrl.toString());
+
+    const pagesUrl = new URL(
+      `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me/accounts`
+    );
+
+    pagesUrl.searchParams.set(
+      "fields",
+      "id,name,category,tasks,access_token"
+    );
+    pagesUrl.searchParams.set("access_token", userAccessToken);
+
+    const pagesData = await readFacebookJson(pagesUrl.toString());
+
+    facebookConnection = {
+      connected: true,
+      userAccessToken,
+      userId: String(profileData.id || ""),
+      userName: String(profileData.name || ""),
+      pages: Array.isArray(pagesData.data) ? pagesData.data : [],
+      connectedAt: new Date().toISOString(),
+      error: "",
+    };
+
+    console.log(
+      `Facebook connected for ${facebookConnection.userName || "user"}.`
+    );
+    console.log(
+      `Facebook Pages found: ${facebookConnection.pages.length}.`
+    );
+
+    return response.redirect("/?facebook=connected");
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Facebook could not be connected.";
+
+    console.error("Facebook OAuth error:", message);
+
+    facebookConnection = {
+      connected: false,
+      userAccessToken: "",
+      userId: "",
+      userName: "",
+      pages: [],
+      connectedAt: "",
+      error: message,
+    };
+
+    return response.redirect(
+      `/?facebook=error&message=${encodeURIComponent(message)}`
+    );
+  }
+});
+
+/*
+ * Returns safe Facebook connection information.
+ * Access tokens and the App Secret are never returned to the browser.
+ */
+app.get("/api/facebook/status", (request, response) => {
+  response.json({
+    ok: true,
+    ...publicFacebookConnection(),
+  });
+});
+
+app.post("/api/facebook/disconnect", (request, response) => {
+  facebookConnection = {
+    connected: false,
+    userAccessToken: "",
+    userId: "",
+    userName: "",
+    pages: [],
+    connectedAt: "",
+    error: "",
+  };
+
+  response.json({
+    ok: true,
+    connected: false,
+    status: "Facebook disconnected from StreamBridge.",
   });
 });
 
@@ -134,7 +414,9 @@ async function connectTikTok(socket, usernameValue) {
   socket.tiktokUsername = username;
 
   connection.on(WebcastEvent.CHAT, (data) => {
-    const messageText = String(data?.content || data?.comment || "").trim();
+    const messageText = String(
+      data?.content || data?.comment || ""
+    ).trim();
 
     if (!messageText) {
       return;
@@ -159,41 +441,83 @@ async function connectTikTok(socket, usernameValue) {
     });
   });
 
-connection.on(WebcastEvent.MEMBER, (data) => {
-  const username =
-    data?.user?.displayId ||
-    data?.user?.nickname ||
-    data?.user?.userId ||
-    "TikTok viewer";
+  connection.on(WebcastEvent.MEMBER, (data) => {
+    const memberUsername =
+      data?.user?.displayId ||
+      data?.user?.uniqueId ||
+      data?.user?.nickname ||
+      data?.user?.userId ||
+      "TikTok viewer";
 
-  sendJson(socket, {
-    type: "tiktok_join",
-    username,
+    sendJson(socket, {
+      type: "tiktok_join",
+      username: memberUsername,
+    });
   });
-});
 
-connection.on(WebcastEvent.LIKE, (data) => {
-  const username =
-    data?.user?.displayId ||
-    data?.user?.nickname ||
-    data?.user?.userId ||
-    "TikTok viewer";
+  connection.on(WebcastEvent.LIKE, (data) => {
+    const likeUsername =
+      data?.user?.displayId ||
+      data?.user?.uniqueId ||
+      data?.user?.nickname ||
+      data?.user?.userId ||
+      "TikTok viewer";
 
-  sendJson(socket, {
-    type: "tiktok_like",
-    username,
-    count: Number(data?.count || 0),
-    total: Number(data?.total || 0),
+    sendJson(socket, {
+      type: "tiktok_like",
+      username: likeUsername,
+      count: Number(data?.count || 0),
+      total: Number(data?.total || 0),
+    });
   });
-});
+
   connection.on(WebcastEvent.ROOM_USER, (data) => {
-    const viewerCount = Number(data?.total || 0);
+    const viewerCount = Number(
+      data?.viewerCount ??
+        data?.total ??
+        data?.totalUser ??
+        data?.memberCount ??
+        0
+    );
+
+    console.log("TikTok viewer update:", {
+      viewerCount,
+      total: data?.total,
+      totalUser: data?.totalUser,
+      memberCount: data?.memberCount,
+    });
 
     sendJson(socket, {
       type: "tiktok_viewers",
       viewers: viewerCount,
     });
   });
+
+  connection.on(WebcastEvent.GIFT, (data) => {
+    const giftUsername =
+      data?.user?.displayId ||
+      data?.user?.uniqueId ||
+      data?.user?.nickname ||
+      data?.user?.userId ||
+      "TikTok viewer";
+
+    const giftName =
+      data?.giftDetails?.giftName ||
+      data?.giftName ||
+      "TikTok gift";
+
+    const repeatCount = Number(
+      data?.repeatCount || data?.repeatEnd || 1
+    );
+
+    sendJson(socket, {
+      type: "tiktok_gift",
+      username: giftUsername,
+      giftName,
+      count: repeatCount,
+    });
+  });
+
   connection.on(WebcastEvent.DISCONNECTED, () => {
     if (socket.tiktokConnection !== connection) {
       return;
@@ -257,9 +581,14 @@ connection.on(WebcastEvent.LIKE, (data) => {
     }
 
     const errorMessage =
-      error instanceof Error ? error.message : "Could not connect to TikTok.";
+      error instanceof Error
+        ? error.message
+        : "Could not connect to TikTok.";
 
-    console.error(`TikTok connection failed for @${username}:`, errorMessage);
+    console.error(
+      `TikTok connection failed for @${username}:`,
+      errorMessage
+    );
 
     sendJson(socket, {
       type: "tiktok_status",
@@ -341,17 +670,30 @@ websocketServer.on("connection", (socket) => {
 
 /*
  * React single-page application fallback.
- * API and WebSocket requests are handled before this point.
+ * API, OAuth and WebSocket requests are handled before this point.
  */
 app.use((request, response, next) => {
-  if (request.path.startsWith("/api/")) {
+  if (
+    request.path.startsWith("/api/") ||
+    request.path.startsWith("/auth/")
+  ) {
     return next();
   }
 
-  response.sendFile(path.join(DIST_FOLDER, "index.html"), (error) => {
-    if (error) {
-      next(error);
+  response.sendFile(
+    path.join(DIST_FOLDER, "index.html"),
+    (error) => {
+      if (error) {
+        next(error);
+      }
     }
+  );
+});
+
+app.use((request, response) => {
+  response.status(404).json({
+    ok: false,
+    error: "StreamBridge route not found.",
   });
 });
 

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -73,7 +73,9 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
           <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>Combined Chat</div>
           <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 4 }}>{"\u{1F7E2}"} Twitch: {twitchStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>{"\u{1F7E2}"} YouTube: {youtubeStatus}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div><div style={{ color: "#67e8f9", fontSize: ".85rem", marginTop: 2 }}>
+  ?? TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} • ?? Likes: {Number(tiktokLikes || 0).toLocaleString()}
+</div>
          
         </div>
         <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: 16, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
@@ -224,7 +226,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "👋 joined the LIVE",
+      text: "?? joined the LIVE",
     },
   ].slice(-100));
 }
@@ -236,7 +238,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
+      text: `?? sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -882,6 +884,7 @@ if (data.type === "tiktok_like") {
     </main>
   );
 }
+
 
 
 
