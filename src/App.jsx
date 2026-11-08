@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -74,7 +74,7 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"\u{1F7E2}"} Twitch: {twitchStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} YouTube: {youtubeStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div><div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
-  👁️ TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} • ❤️ Likes: {Number(tiktokLikes || 0).toLocaleString()}
+  ðŸ‘ï¸ TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} â€¢ â¤ï¸ Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
          
         </div>
@@ -226,7 +226,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "👋 joined the LIVE",
+      text: "ðŸ‘‹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -238,11 +238,35 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
+      text: `â¤ï¸ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} â€¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
 
+          if (data.type === "tiktok_gift") {
+            const giftUsername = cleanChatText(
+              data.username || "TikTok viewer"
+            ).slice(0, 80);
+
+            const giftName = cleanChatText(
+              data.giftName || "TikTok gift"
+            ).slice(0, 100);
+
+            const giftCount = Math.max(
+              1,
+              Number(data.count || 1)
+            );
+
+            setMessages((current) => [
+              ...current,
+              {
+                id: `tiktok-gift-${Date.now()}-${Math.random()}`,
+                platform: "TikTok",
+                username: giftUsername,
+                text: `🎁 sent ${giftName} ×${giftCount}`,
+              },
+            ].slice(-100));
+          }
           if (data.type === "chat_message" && data.message) {
             const msg = { ...data.message, username: cleanChatText(data.message.username).slice(0, 80), text: cleanChatText(data.message.text) };
             const fingerprint = `${msg.platform}|${msg.username}`.toLowerCase() + `|${msg.text}`.toLowerCase();
@@ -884,6 +908,7 @@ if (data.type === "tiktok_like") {
     </main>
   );
 }
+
 
 
 
