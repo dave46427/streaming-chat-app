@@ -61,33 +61,33 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
   return (
-    <main style={{ minHeight: "100vh", background: highContrast ? "#000" : (theme === "light" ? "#eef2ff" : "#0b1020"), color: highContrast ? "#fff" : (theme === "light" ? "#111827" : "white"), padding: 18, fontSize: largeText ? "125%" : "100%", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
+    <main style={{ minHeight: "100vh", background: highContrast ? "#000" : (theme === "light" ? "#eef2ff" : "#0b1020"), color: highContrast ? "#fff" : (theme === "light" ? "#111827" : "white"), padding: "clamp(8px, 1.5vw, 14px)", fontSize: largeText ? "125%" : "100%", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
       <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>Skip to chat messages</a>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <button type="button" onClick={onBack} style={liveButtonStyle}>Back to Settings</button>
         <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>STREAMBRIDGE LIVE</div>
         <div style={{ color: "#70f0a0", fontWeight: 700 }}>LIVE CHAT</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>Add chat background<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
       </header>
-      <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100vh - 118px)", minHeight: 430, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
-        <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "16px 18px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
-          <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>Combined Chat</div>
-          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 4 }}>{"\u{1F7E2}"} Twitch: {twitchStatus}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>{"\u{1F7E2}"} YouTube: {youtubeStatus}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".85rem", marginTop: 2 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div><div style={{ color: "#67e8f9", fontSize: ".85rem", marginTop: 2 }}>
-  ?? TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} • ?? Likes: {Number(tiktokLikes || 0).toLocaleString()}
+      <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
+        <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
+          <div style={{ fontSize: "1rem", fontWeight: 800 }}>Combined Chat</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"\u{1F7E2}"} Twitch: {twitchStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} YouTube: {youtubeStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div><div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
+  👁️ TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} • ❤️ Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
          
         </div>
-        <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: 16, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
+        <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
           {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messages...</div> : messages.map((msg, index) => (
-            <div key={msg.id ?? index} style={{ padding: "12px 14px", marginBottom: 10, background: messageBackgroundColor, color: messageTextColor, borderRadius: 12, borderLeft: `4px solid ${msg.platform === "YouTube" ? youtubeMessageColor : msg.platform === "TikTok" ? tiktokMessageColor : twitchMessageColor}` }}>
-              <div style={{ fontSize: ".8rem", color: "#aeb8d4", marginBottom: 4 }}>{msg.platform ?? "Chat"} {"\u2022"} <strong style={{ color: messageTextColor }}>{msg.username ?? "Viewer"}</strong></div>
-              <div style={{ fontSize: "1.05rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
+            <div key={msg.id ?? index} style={{ padding: "8px 11px", marginBottom: 7, background: chatBackground ? `${messageBackgroundColor}D9` : messageBackgroundColor, color: messageTextColor, borderRadius: 10, backdropFilter: chatBackground ? "blur(2px)" : "none", borderLeft: `4px solid ${msg.platform === "YouTube" ? youtubeMessageColor : msg.platform === "TikTok" ? tiktokMessageColor : twitchMessageColor}` }}>
+              <div style={{ fontSize: ".76rem", color: "#aeb8d4", marginBottom: 4 }}>{msg.platform ?? "Chat"} {"\u2022"} <strong style={{ color: messageTextColor }}>{msg.username ?? "Viewer"}</strong></div>
+              <div style={{ fontSize: ".98rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
             </div>
           ))}
           <div ref={chatEndRef} />
         </div>
-        <form onSubmit={(event) => { event.preventDefault(); onSend(); }} style={{ display: "flex", gap: 12, padding: 16, borderTop: "3px solid #394968", background: "linear-gradient(180deg, #202b49 0%, #0d1428 72%, #080c18 100%)", flexWrap: "wrap", boxShadow: "inset 0 3px 0 rgba(255,255,255,.12), inset 0 -5px 12px rgba(0,0,0,.48), 0 -8px 18px rgba(0,0,0,.38)", position: "relative", zIndex: 2 }}>
+        <form onSubmit={(event) => { event.preventDefault(); onSend(); }} style={{ display: "flex", gap: 8, padding: "10px", borderTop: "3px solid #394968", background: "linear-gradient(180deg, #202b49 0%, #0d1428 72%, #080c18 100%)", flexWrap: "wrap", boxShadow: "inset 0 3px 0 rgba(255,255,255,.12), inset 0 -5px 12px rgba(0,0,0,.48), 0 -8px 18px rgba(0,0,0,.38)", position: "relative", zIndex: 2 }}>
           <label htmlFor="send-target" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Send message to</label><select id="send-target" aria-label="Send message to platform" value={sendTarget} onChange={(event) => setSendTarget(event.target.value)} style={{ padding: "11px 13px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#080b15", borderLeftColor: "#080b15", borderRightColor: "#536181", borderBottomColor: "#536181", background: "linear-gradient(180deg, #10172b 0%, #1d2947 100%)", color: "white", fontWeight: 700, boxShadow: "inset 0 4px 8px rgba(0,0,0,.72), 0 2px 0 rgba(255,255,255,.12)" }}>
             <option value="twitch">Twitch</option><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="both">Twitch + YouTube</option><option value="all">All Sendable Platforms</option>
           </select>
@@ -226,7 +226,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "?? joined the LIVE",
+      text: "👋 joined the LIVE",
     },
   ].slice(-100));
 }
@@ -238,7 +238,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `?? sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
+      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
