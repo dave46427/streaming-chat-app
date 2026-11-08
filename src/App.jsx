@@ -74,7 +74,7 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"\u{1F7E2}"} Twitch: {twitchStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} YouTube: {youtubeStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div><div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
-  ðŸ‘ï¸ TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} â€¢ â¤ï¸ Likes: {Number(tiktokLikes || 0).toLocaleString()}
+    TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
          
         </div>
