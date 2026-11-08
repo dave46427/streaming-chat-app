@@ -466,8 +466,10 @@ async function connectTikTok(socket, usernameValue) {
     sendJson(socket, {
       type: "tiktok_like",
       username: likeUsername,
-      count: Number(data?.count || 0),
-      total: Number(data?.total || 0),
+      count: Number(data?.count ?? 0),
+total: Number(data?.total ?? 0),
+
+      
     });
   });
 
@@ -477,7 +479,11 @@ async function connectTikTok(socket, usernameValue) {
         data?.total ??
         data?.totalUser ??
         data?.memberCount ??
-        0
+data?.statistics?.viewerCount ??
+data?.statistics?.memberCount ??
+data?.roomInfo?.viewerCount ??
+data?.roomInfo?.userCount ??
+0
     );
 
     console.log("TikTok viewer update:", {
