@@ -675,6 +675,13 @@ websocketServer.on("connection", (socket) => {
   });
 });
 
+app.get("/terms.html", (request, response, next) => {
+  response.sendFile(path.join(DIST_FOLDER, "terms.html"), (error) => {
+    if (error) {
+      next(error);
+    }
+  });
+});
 /*
  * React single-page application fallback.
  * API, OAuth and WebSocket requests are handled before this point.
@@ -720,3 +727,4 @@ app.use((error, request, response, next) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`StreamBridge server is running on port ${PORT}`);
 });
+
