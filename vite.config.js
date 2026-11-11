@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: "autoUpdate",
 
       manifest: {
-        name: "StreamBridge",
-        short_name: "StreamBridge",
+        name: "DavaBridge",
+        short_name: "DavaBridge",
         description: "Combined live streaming chat for multiple platforms",
         start_url: "/",
         scope: "/",

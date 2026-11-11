@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -65,7 +65,7 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
       <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>Skip to chat messages</a>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <button type="button" onClick={onBack} style={liveButtonStyle}>Back to Settings</button>
-        <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>STREAMBRIDGE LIVE</div>
+        <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>DAVABRIDGE LIVE</div>
         <div style={{ color: "#70f0a0", fontWeight: 700 }}>LIVE CHAT</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>Add chat background<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
       </header>
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
@@ -184,7 +184,7 @@ export default function App() {
 
   const [twitchConnected, setTwitchConnected] = useState(false); const [twitchStatus, setTwitchStatus] = useState("Not connected"); const [twitchUser, setTwitchUser] = useState(null);
   const [twitchChannel, setTwitchChannel] = useState(() => getSavedTwitchChannel()); const [activeChannel, setActiveChannel] = useState(() => getSavedTwitchChannel());
-  const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState("");
+  const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState(""); const [facebookConnected, setFacebookConnected] = useState(false); const [facebookStatus, setFacebookStatus] = useState("Not connected"); const [facebookPages, setFacebookPages] = useState([]);
     const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected"); const [tiktokViewers, setTiktokViewers] = useState(0); const [tiktokLikes, setTiktokLikes] = useState(0);
   const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");
@@ -263,7 +263,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `🎁 sent ${giftName} ×${giftCount}`,
+                text: `?? sent ${giftName} ×${giftCount}`,
               },
             ].slice(-100));
           }
@@ -293,6 +293,7 @@ if (data.type === "tiktok_like") {
     return () => { stopped = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current) { tiktokSocketRef.current.onclose = null; tiktokSocketRef.current.close(); } };
   }, []);
 
+  const connectFacebook = () => { setFacebookStatus("Opening Facebook login..."); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); window.location.href = window.location.hostname === "localhost" ? "http://localhost:3000/auth/facebook" : "/auth/facebook"; };
   const connectTikTok = () => { tiktokManualDisconnectRef.current = false; const username = tiktokUsername.trim().replace(/^@/, ""); if (!username) return setTiktokStatus("Enter a TikTok username first."); if (!tiktokSocketRef.current || tiktokSocketRef.current.readyState !== WebSocket.OPEN) return setTiktokStatus("TikTok server is not ready. Try again in a moment."); localStorage.setItem("tiktok_username", username); setTiktokUsername(username); setTiktokStatus(`Connecting to @${username}...`); tiktokSocketRef.current.send(JSON.stringify({ type: "connect_tiktok", username })); };
   const disconnectTikTok = () => { tiktokManualDisconnectRef.current = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current?.readyState === WebSocket.OPEN) tiktokSocketRef.current.send(JSON.stringify({ type: "disconnect_tiktok" })); setTiktokConnected(false); setTiktokStatus("Not connected"); };
   const connectTwitch = () => { sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); sessionStorage.removeItem("youtube_oauth_pending"); const redirectUri = window.location.origin + "/"; window.location.href = "https://id.twitch.tv/oauth2/authorize" + "?response_type=token" + `&client_id=${TWITCH_CLIENT_ID}` + `&redirect_uri=${encodeURIComponent(redirectUri)}` + "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true"; };
@@ -533,29 +534,29 @@ if (data.type === "tiktok_like") {
       privacy: {
         title: "Privacy Notice",
         paragraphs: [
-          "StreamBridge is an adults-only streaming control and combined-chat application.",
-          "The age screen stores an 18+ confirmation in this browser on this device so the screen does not appear again after confirmation. StreamBridge does not request a date of birth, identity document or biometric information for this confirmation.",
-          "Platform access tokens and preferences used by this version are stored in browser session or local storage. Do not use StreamBridge on a shared or public device.",
-          "Connected platforms process account and chat information under their own privacy terms. StreamBridge should publish complete business contact, retention, deletion and user-rights information before public release.",
+          "DavaBridge is an adults-only streaming control and combined-chat application.",
+          "The age screen stores an 18+ confirmation in this browser on this device so the screen does not appear again after confirmation. DavaBridge does not request a date of birth, identity document or biometric information for this confirmation.",
+          "Platform access tokens and preferences used by this version are stored in browser session or local storage. Do not use DavaBridge on a shared or public device.",
+          "Connected platforms process account and chat information under their own privacy terms. DavaBridge should publish complete business contact, retention, deletion and user-rights information before public release.",
           "This draft notice is product text, not a substitute for a reviewed legal privacy policy."
         ]
       },
       terms: {
         title: "Terms of Use",
         paragraphs: [
-          "You must be at least 18 years old to access or use StreamBridge.",
+          "You must be at least 18 years old to access or use DavaBridge.",
           "You must use only accounts and channels that you own or are authorised to manage, and you must follow the rules of every connected streaming platform.",
-          "Do not use StreamBridge for unlawful activity, harassment, exploitation, evasion of platform safeguards or distribution of harmful content.",
+          "Do not use DavaBridge for unlawful activity, harassment, exploitation, evasion of platform safeguards or distribution of harmful content.",
           "Access may be refused or withdrawn when these conditions are breached. Features may depend on third-party platforms and are not guaranteed to remain available.",
-          "These are draft product terms and should be reviewed for the countries where StreamBridge will be offered before public release."
+          "These are draft product terms and should be reviewed for the countries where DavaBridge will be offered before public release."
         ]
       },
       safety: {
         title: "Safety and Child Protection",
         paragraphs: [
-          "StreamBridge is intended only for adults aged 18 or over. Anyone under 18 must not continue past the age screen.",
+          "DavaBridge is intended only for adults aged 18 or over. Anyone under 18 must not continue past the age screen.",
           "The current control is self-confirmation, not identity or document verification. A person could provide a false answer, so this control alone cannot guarantee that every user is an adult.",
-          "StreamBridge does not ask children to provide personal information and does not include a child account or child mode.",
+          "DavaBridge does not ask children to provide personal information and does not include a child account or child mode.",
           "Before public release, the service owner should complete a child-access and privacy risk assessment and decide whether proportionate third-party age assurance is required.",
           "Suspected child-safety concerns should be reported through a clearly published support route and, where immediate danger or illegal activity is involved, to the appropriate platform and authorities."
         ]
@@ -580,13 +581,13 @@ if (data.type === "tiktok_like") {
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", background: "radial-gradient(circle at 50% 10%, rgba(124,58,237,.28), transparent 34%), linear-gradient(145deg, #070912 0%, #0b1020 48%, #080b16 100%)", color: "white", fontFamily: "Arial, sans-serif" }}>
       <section style={{ width: "min(540px, 100%)", textAlign: "center", background: "rgba(12,17,34,.94)", border: "1px solid rgba(167,139,250,.55)", borderRadius: 28, padding: "36px 30px", boxShadow: "0 0 35px rgba(124,58,237,.18), 0 28px 80px rgba(0,0,0,.55)", backdropFilter: "blur(16px)" }}>
         <div style={{ width: 88, height: 88, margin: "0 auto 22px", display: "grid", placeItems: "center", borderRadius: "50%", background: "linear-gradient(135deg, rgba(124,58,237,.28), rgba(37,99,235,.22))", border: "2px solid #8b5cf6", boxShadow: "0 0 30px rgba(139,92,246,.4)", fontSize: "2rem", fontWeight: 900 }}>18+</div>
-        <p style={{ margin: "0 0 8px", color: "#a78bfa", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>STREAMBRIDGE</p>
+        <p style={{ margin: "0 0 8px", color: "#a78bfa", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>DAVABRIDGE</p>
         <h1 style={{ margin: "0 0 14px", fontSize: "clamp(1.8rem, 6vw, 2.5rem)", lineHeight: 1.12 }}>Age & Safety</h1>
-        <p style={{ color: "#cbd5e1", lineHeight: 1.65, margin: "0 auto 10px", maxWidth: 440 }}>StreamBridge is intended for adults aged 18 or over.</p>
+        <p style={{ color: "#cbd5e1", lineHeight: 1.65, margin: "0 auto 10px", maxWidth: 440 }}>DavaBridge is intended for adults aged 18 or over.</p>
         <p style={{ color: "#94a3b8", lineHeight: 1.55, margin: "0 auto 26px", maxWidth: 440, fontSize: ".92rem" }}>Please confirm that you are 18 or older before continuing.</p>
                <label style={{ display: "flex", gap: 12, alignItems: "flex-start", textAlign: "left", padding: "14px 16px", margin: "0 0 14px", borderRadius: 14, background: "rgba(255,255,255,.04)", border: "1px solid rgba(167,139,250,.28)", color: "#dbe4f3", lineHeight: 1.5, cursor: "pointer" }}>
           <input type="checkbox" checked={ageAgreementChecked} onChange={(event) => setAgeAgreementChecked(event.target.checked)} style={{ marginTop: 4, width: 18, height: 18, accentColor: "#7c3aed", flex: "0 0 auto" }} />
-          <span>I confirm that I am 18 or over. I understand that StreamBridge is an 18+ service only, and I agree to the Terms of Use and Privacy Notice.</span>
+          <span>I confirm that I am 18 or over. I understand that DavaBridge is an 18+ service only, and I agree to the Terms of Use and Privacy Notice.</span>
         </label>
         <p style={{ color: "#94a3b8", lineHeight: 1.5, margin: "0 auto 14px", maxWidth: 440, fontSize: ".82rem" }}>By continuing, you confirm that you meet the 18+ age requirement.</p>
         <button type="button" disabled={!ageAgreementChecked} onClick={() => { if (!ageAgreementChecked) return; localStorage.setItem("streambridge_age_verified", "true"); setAgeVerified(true); }} style={{ width: "100%", border: 0, borderRadius: 14, padding: "16px 18px", color: "white", fontSize: "1rem", fontWeight: 900, cursor: ageAgreementChecked ? "pointer" : "not-allowed", background: ageAgreementChecked ? "linear-gradient(135deg, #7c3aed, #2563eb)" : "#475569", opacity: ageAgreementChecked ? 1 : 0.6, boxShadow: ageAgreementChecked ? "0 10px 30px rgba(124,58,237,.35)" : "none" }}>I am 18 or over</button>
@@ -645,9 +646,9 @@ if (data.type === "tiktok_like") {
       <main style={{ minHeight: "100vh", width: "100%", maxWidth: "none", margin: 0, padding: "24px 16px", boxSizing: "border-box", display: "grid", placeItems: "center", background: "radial-gradient(circle at 50% 0%, rgba(14,165,233,.20), transparent 34%), linear-gradient(145deg, #050914 0%, #081225 50%, #040712 100%)", color: "white", fontFamily: "Arial, sans-serif" }}>
         <section style={{ width: "min(780px, 100%)", padding: "clamp(20px, 4vw, 36px)", borderRadius: 28, border: "1px solid rgba(34,211,238,.45)", background: "rgba(5,10,24,.95)", boxShadow: "0 0 45px rgba(34,211,238,.12), 0 30px 90px rgba(0,0,0,.58)", boxSizing: "border-box" }}>
           <header style={{ display: "block", textAlign: "center", marginBottom: 26 }}>
-            <p style={{ margin: "0 0 8px", color: "#67e8f9", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>STREAMBRIDGE</p>
+            <p style={{ margin: "0 0 8px", color: "#67e8f9", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>DAVABRIDGE</p>
             <h1 style={{ margin: "0 0 10px", fontSize: "clamp(2rem, 7vw, 3.2rem)", lineHeight: 1.05 }}>Connect Platforms</h1>
-            <p style={{ margin: "0 auto", maxWidth: 590, color: "#b8c5db", lineHeight: 1.6 }}>Connect the platforms you want StreamBridge to bring together. You can change connections later in Settings.</p>
+            <p style={{ margin: "0 auto", maxWidth: 590, color: "#b8c5db", lineHeight: 1.6 }}>Connect the platforms you want DavaBridge to bring together. You can change connections later in Settings.</p>
           </header>
 
           <div style={{ display: "grid", gap: 14 }}>
@@ -681,12 +682,21 @@ if (data.type === "tiktok_like") {
               {tiktokConnected ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectTikTok} style={connectionButton}>CONNECT</button>}
             </article>
 
-            {["Facebook Live / Meta", "Kick", "Mixcloud"].map((name) => (
-              <article style={platformCard} key={name}>
-                <div><strong style={{ fontSize: "1.08rem" }}>{name}</strong><div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div></div>
-                <div style={badge(false)}>COMING SOON</div>
-              </article>
-            ))}
+            <article style={platformCard}>
+  <div>
+    <strong style={{ fontSize: "1.08rem" }}>Facebook Live / Meta</strong>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Connect Facebook Live</div>
+    <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>{facebookStatus}</div>
+  </div>
+  {facebookConnected ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectFacebook} style={connectionButton}>CONNECT</button>}
+</article>
+
+{["Kick", "Mixcloud"].map((name) => (
+  <article style={platformCard} key={name}>
+    <div><strong style={{ fontSize: "1.08rem" }}>{name}</strong><div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div></div>
+    <div style={badge(false)}>COMING SOON</div>
+  </article>
+))}
           </div>
 
           <div style={{ display: "grid", gap: 11, marginTop: 24 }}>
@@ -815,12 +825,12 @@ if (data.type === "tiktok_like") {
       <section style={homeCard}>
         <header style={{ textAlign: "center", marginBottom: 30 }}>
           <img
-            src="/streambridge-logo.png"
-            alt="StreamBridge"
+            src="/davabridge-icon.png"
+            alt="DavaBridge"
             style={{ width: 96, height: 96, objectFit: "contain", borderRadius: 22, marginBottom: 16 }}
           />
           <p style={{ margin: "0 0 10px", color: lighterAccent, fontWeight: 900, letterSpacing: 4, fontSize: ".78rem" }}>
-            STREAMBRIDGE
+            DAVABRIDGE
           </p>
           <h1 style={{ margin: "0 0 12px", fontSize: "clamp(2.25rem, 8vw, 4.5rem)", lineHeight: 1.02 }}>
             All your chats. One place.
@@ -908,6 +918,7 @@ if (data.type === "tiktok_like") {
     </main>
   );
 }
+
 
 
 

@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
 import crypto from "node:crypto";
@@ -116,7 +116,7 @@ async function readFacebookJson(url, options = {}) {
 app.get("/api/health", (request, response) => {
   response.json({
     ok: true,
-    service: "StreamBridge",
+    service: "DavaBridge",
     eulerApiKeyLoaded: Boolean(EULER_API_KEY),
     facebookCredentialsLoaded: Boolean(
       FACEBOOK_APP_ID && FACEBOOK_APP_SECRET
@@ -317,7 +317,7 @@ app.post("/api/facebook/disconnect", (request, response) => {
   response.json({
     ok: true,
     connected: false,
-    status: "Facebook disconnected from StreamBridge.",
+    status: "Facebook disconnected from DavaBridge.",
   });
 });
 
@@ -619,7 +619,7 @@ websocketServer.on("connection", (socket) => {
   sendJson(socket, {
     type: "server_status",
     connected: true,
-    status: "Connected to the StreamBridge server.",
+    status: "Connected to the DavaBridge server.",
   });
 
   socket.on("message", async (rawMessage) => {
@@ -652,14 +652,14 @@ websocketServer.on("connection", (socket) => {
 
       sendJson(socket, {
         type: "server_error",
-        message: "Unknown StreamBridge command.",
+        message: "Unknown DavaBridge command.",
       });
     } catch (error) {
       console.error("WebSocket message error:", error);
 
       sendJson(socket, {
         type: "server_error",
-        message: "The StreamBridge server could not read that command.",
+        message: "The DavaBridge server could not read that command.",
       });
     }
   });
@@ -671,7 +671,7 @@ websocketServer.on("connection", (socket) => {
   });
 
   socket.on("error", (error) => {
-    console.error("StreamBridge WebSocket error:", error);
+    console.error("DavaBridge WebSocket error:", error);
   });
 });
 
@@ -707,12 +707,12 @@ app.use((request, response, next) => {
 app.use((request, response) => {
   response.status(404).json({
     ok: false,
-    error: "StreamBridge route not found.",
+    error: "DavaBridge route not found.",
   });
 });
 
 app.use((error, request, response, next) => {
-  console.error("StreamBridge server error:", error);
+  console.error("DavaBridge server error:", error);
 
   if (response.headersSent) {
     return next(error);
@@ -720,11 +720,11 @@ app.use((error, request, response, next) => {
 
   response.status(500).json({
     ok: false,
-    error: "StreamBridge server error.",
+    error: "DavaBridge server error.",
   });
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`StreamBridge server is running on port ${PORT}`);
+  console.log(`DavaBridge server is running on port ${PORT}`);
 });
 

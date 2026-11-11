@@ -496,7 +496,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
       <section
         className="sb-scene"
-        aria-label="StreamBridge startup"
+        aria-label="DavaBridge startup"
       >
         <div className="sb-darkness" />
         <div className="sb-city-light" />
@@ -505,10 +505,10 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
         <div
           className="sb-brand"
-          aria-label="StreamBridge"
+          aria-label="DavaBridge"
         >
           <h1 className="sb-brand-title">
-            STREAMBRIDGE
+            DAVABRIDGE
           </h1>
 
           <p className="sb-tagline">
