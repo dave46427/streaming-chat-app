@@ -226,7 +226,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "ðŸ‘‹ joined the LIVE",
+      text: "Ã°Å¸â€˜â€¹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -238,7 +238,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `â¤ï¸ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} â€¢ Total ${Number(data.total || 0)}`,
+      text: `Ã¢ÂÂ¤Ã¯Â¸Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} Ã¢â‚¬Â¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -263,7 +263,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `?? sent ${giftName} ×${giftCount}`,
+                text: `?? sent ${giftName} Ã—${giftCount}`,
               },
             ].slice(-100));
           }
@@ -294,6 +294,102 @@ if (data.type === "tiktok_like") {
   }, []);
 
   const connectFacebook = () => { setFacebookStatus("Opening Facebook login..."); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); window.location.href = window.location.hostname === "localhost" ? "http://localhost:3000/auth/facebook" : "/auth/facebook"; };
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFacebookStatus = async () => {
+      const query = new URLSearchParams(window.location.search);
+      const facebookResult = query.get("facebook");
+      const facebookMessage = query.get("message");
+
+      if (facebookResult === "error") {
+        setFacebookConnected(false);
+        setFacebookPages([]);
+        setFacebookStatus(
+          facebookMessage
+            ? `Facebook connection failed: ${facebookMessage}`
+            : "Facebook connection failed."
+        );
+
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
+        return;
+      }
+
+      try {
+        if (facebookResult === "connected") {
+          setFacebookStatus("Checking Facebook connection...");
+        }
+
+        const response = await fetch("/api/facebook/status", {
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.ok === false) {
+          throw new Error(
+            data.error || "Could not check the Facebook connection."
+          );
+        }
+
+        if (cancelled) return;
+
+        const connected = Boolean(data.connected);
+        const pages = Array.isArray(data.pages) ? data.pages : [];
+
+        setFacebookConnected(connected);
+        setFacebookPages(pages);
+
+        if (connected) {
+          localStorage.setItem(
+            "streambridge_facebook_configured",
+            "true"
+          );
+
+          const accountName = data.userName
+            ? ` as ${data.userName}`
+            : "";
+
+          const pageText =
+            pages.length === 1
+              ? "1 Facebook Page found"
+              : `${pages.length} Facebook Pages found`;
+
+          setFacebookStatus(
+            `Facebook connected${accountName}. ${pageText}.`
+          );
+        } else {
+          setFacebookStatus(data.error || "Not connected");
+        }
+      } catch (error) {
+        if (cancelled) return;
+
+        setFacebookConnected(false);
+        setFacebookPages([]);
+        setFacebookStatus(
+          error.message || "Could not check the Facebook connection."
+        );
+      } finally {
+        if (facebookResult) {
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+          );
+        }
+      }
+    };
+
+    loadFacebookStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const connectTikTok = () => { tiktokManualDisconnectRef.current = false; const username = tiktokUsername.trim().replace(/^@/, ""); if (!username) return setTiktokStatus("Enter a TikTok username first."); if (!tiktokSocketRef.current || tiktokSocketRef.current.readyState !== WebSocket.OPEN) return setTiktokStatus("TikTok server is not ready. Try again in a moment."); localStorage.setItem("tiktok_username", username); setTiktokUsername(username); setTiktokStatus(`Connecting to @${username}...`); tiktokSocketRef.current.send(JSON.stringify({ type: "connect_tiktok", username })); };
   const disconnectTikTok = () => { tiktokManualDisconnectRef.current = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current?.readyState === WebSocket.OPEN) tiktokSocketRef.current.send(JSON.stringify({ type: "disconnect_tiktok" })); setTiktokConnected(false); setTiktokStatus("Not connected"); };
   const connectTwitch = () => { sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); sessionStorage.removeItem("youtube_oauth_pending"); const redirectUri = window.location.origin + "/"; window.location.href = "https://id.twitch.tv/oauth2/authorize" + "?response_type=token" + `&client_id=${TWITCH_CLIENT_ID}` + `&redirect_uri=${encodeURIComponent(redirectUri)}` + "&scope=user%3Aread%3Achat+user%3Awrite%3Achat&force_verify=true"; };
