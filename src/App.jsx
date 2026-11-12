@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -226,7 +226,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "Ã°Å¸â€˜â€¹ joined the LIVE",
+      text: "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ¢â‚¬Â¹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -238,7 +238,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `Ã¢ÂÂ¤Ã¯Â¸Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} Ã¢â‚¬Â¢ Total ${Number(data.total || 0)}`,
+      text: `ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -263,7 +263,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `?? sent ${giftName} Ã—${giftCount}`,
+                text: `?? sent ${giftName} Ãƒâ€”${giftCount}`,
               },
             ].slice(-100));
           }
@@ -293,7 +293,7 @@ if (data.type === "tiktok_like") {
     return () => { stopped = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current) { tiktokSocketRef.current.onclose = null; tiktokSocketRef.current.close(); } };
   }, []);
 
-  const connectFacebook = () => { setFacebookStatus("Opening Facebook login..."); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); window.location.href = window.location.hostname === "localhost" ? "http://localhost:3000/auth/facebook" : "/auth/facebook"; };
+  const connectFacebook = () => { setFacebookStatus("Opening Facebook login..."); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); window.location.href = "/auth/facebook"; };
   useEffect(() => {
     let cancelled = false;
 
@@ -1014,6 +1014,7 @@ if (data.type === "tiktok_like") {
     </main>
   );
 }
+
 
 
 
