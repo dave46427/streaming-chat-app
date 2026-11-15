@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -42,7 +42,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -71,12 +71,13 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>Combined Chat</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"\u{1F7E2}"} Twitch: {twitchStatus}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} YouTube: {youtubeStatus}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"\u{1F7E2}"} TikTok: {tiktokStatus}</div><div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
-    TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"🟢"} Twitch: {twitchStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} YouTube: {youtubeStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} TikTok: {tiktokStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} Facebook: {facebookStatus}</div>
+<div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
+  TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
-         
         </div>
         <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
           {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messages...</div> : messages.map((msg, index) => (
@@ -226,7 +227,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ¢â‚¬Â¹ joined the LIVE",
+      text: "Ã°Å¸â€˜â€¹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -238,7 +239,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Total ${Number(data.total || 0)}`,
+      text: `Ã¢ÂÂ¤Ã¯Â¸Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} Ã¢â‚¬Â¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -263,7 +264,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `?? sent ${giftName} Ãƒâ€”${giftCount}`,
+                text: `?? sent ${giftName} Ã—${giftCount}`,
               },
             ].slice(-100));
           }
@@ -293,7 +294,17 @@ if (data.type === "tiktok_like") {
     return () => { stopped = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current) { tiktokSocketRef.current.onclose = null; tiktokSocketRef.current.close(); } };
   }, []);
 
-  const connectFacebook = () => { setFacebookStatus("Opening Facebook login..."); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); window.location.href = "/auth/facebook"; };
+    const connectFacebook = () => {
+    setFacebookStatus("Opening Facebook login...");
+    sessionStorage.setItem("streambridge_setup_in_progress", "true");
+    sessionStorage.removeItem("streambridge_setup_complete");
+
+      window.location.href =
+      window.location.hostname === "localhost"
+        ? "http://localhost:3000/auth/facebook"
+        : "/auth/facebook";  
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -805,12 +816,15 @@ if (data.type === "tiktok_like") {
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
   const connectAll = () => {
     const twitchToken = sessionStorage.getItem("twitch_access_token");
     const youtubeToken = sessionStorage.getItem("youtube_access_token");
     const savedTikTokUsername = localStorage.getItem("tiktok_username") || "";
+const facebookConfigured =
+  localStorage.getItem("streambridge_facebook_configured") === "true" ||
+  facebookConnected;
     const twitchConfigured =
       localStorage.getItem("streambridge_twitch_configured") === "true" ||
       Boolean(twitchToken) ||
@@ -836,7 +850,32 @@ if (data.type === "tiktok_like") {
     } else if (youtubeConfigured) {
       setYoutubeStatus("YouTube is remembered. Sign in again to renew the connection.");
     }
+if (facebookConfigured) {
+  setFacebookStatus("Checking Facebook connection...");
 
+  fetch("/api/facebook/status", { cache: "no-store" })
+    .then((response) => response.json())
+    .then((data) => {
+      const connected = Boolean(data.connected);
+      const pages = Array.isArray(data.pages) ? data.pages : [];
+
+      setFacebookConnected(connected);
+      setFacebookPages(pages);
+
+      if (connected) {
+        localStorage.setItem("streambridge_facebook_configured", "true");
+        setFacebookStatus("Facebook connected");
+      } else {
+        setFacebookStatus(data.error || "Facebook needs reconnecting");
+      }
+    })
+    .catch((error) => {
+      setFacebookConnected(false);
+      setFacebookStatus(
+        error.message || "Could not check Facebook connection"
+      );
+    });
+}
     if (savedTikTokUsername) {
       tiktokManualDisconnectRef.current = false;
       setTiktokUsername(savedTikTokUsername);
@@ -855,9 +894,10 @@ if (data.type === "tiktok_like") {
     const needsTwitchLogin = twitchConfigured && !twitchToken;
     const needsYouTubeLogin = youtubeConfigured && !youtubeToken;
     const nothingConfigured =
-      !twitchConfigured &&
-      !youtubeConfigured &&
-      !savedTikTokUsername;
+  !twitchConfigured &&
+  !youtubeConfigured &&
+  !facebookConfigured &&
+  !savedTikTokUsername;
 
     if (nothingConfigured) {
   openConnections();
@@ -875,10 +915,11 @@ if (data.type === "tiktok_like") {
   };
 
   const connectedCount = [
-    Boolean(sessionStorage.getItem("twitch_access_token")),
-    Boolean(sessionStorage.getItem("youtube_access_token")),
-    tiktokConnected,
-  ].filter(Boolean).length;
+  twitchConnected,
+  youtubeConnected,
+  tiktokConnected,
+  facebookConnected,
+].filter(Boolean).length;
 
   const homeCard = {
     width: "min(920px, 100%)",
@@ -954,14 +995,16 @@ if (data.type === "tiktok_like") {
           color: "#94a3b8",
           fontSize: ".86rem",
         }}>
-          <span>{connectedCount} of 3 current chat connections ready</span>
-          <span aria-hidden="true">&bull;</span>
-          <span>Twitch: {twitchConnected ? "Connected" : "Not connected"}</span>
-          <span aria-hidden="true">&bull;</span>
-          <span>YouTube: {youtubeConnected ? "Connected" : "Not connected"}</span>
-          <span aria-hidden="true">&bull;</span>
-          <span>TikTok: {tiktokConnected ? "Connected" : "Not connected"}</span>
-        </div>
+          <span>{connectedCount} of 4 current chat connections ready</span>
+<span aria-hidden="true">&bull;</span>
+<span>Twitch: {twitchConnected ? "Connected" : "Not connected"}</span>
+<span aria-hidden="true">&bull;</span>
+<span>YouTube: {youtubeConnected ? "Connected" : "Not connected"}</span>
+<span aria-hidden="true">&bull;</span>
+<span>TikTok: {tiktokConnected ? "Connected" : "Not connected"}</span>
+<span aria-hidden="true">&bull;</span>
+<span>Facebook: {facebookConnected ? "Connected" : "Not connected"}</span>
+</div>
 
         <details style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 18, background: "rgba(15,23,42,.66)", overflow: "hidden" }}>
           <summary style={{ padding: "17px 20px", cursor: "pointer", fontWeight: 900, listStylePosition: "inside" }}>
@@ -1014,7 +1057,6 @@ if (data.type === "tiktok_like") {
     </main>
   );
 }
-
 
 
 
