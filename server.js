@@ -303,6 +303,119 @@ app.get("/api/facebook/status", (request, response) => {
   });
 });
 
+/*
+ * Finds the current Facebook Live video for the connected Page.
+ */
+app.get("/api/facebook/live-status", async (request, response) => {
+  if (!facebookConnection.connected) {
+    return response.status(401).json({
+      ok: false,
+      connected: false,
+      live: false,
+      error: "Facebook is not connected.",
+    });
+  }
+
+  const pages = Array.isArray(facebookConnection.pages)
+    ? facebookConnection.pages
+    : [];
+
+  if (pages.length === 0) {
+    return response.status(404).json({
+      ok: false,
+      connected: true,
+      live: false,
+      error: "No Facebook Pages were found.",
+    });
+  }
+
+  try {
+    for (const page of pages) {
+      const pageId = String(page.id || "");
+      const pageName = String(page.name || "Facebook Page");
+      const pageAccessToken = String(page.access_token || "");
+
+      if (!pageId || !pageAccessToken) {
+        continue;
+      }
+
+      const liveVideosUrl = new URL(
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${pageId}/live_videos`
+      );
+
+      liveVideosUrl.searchParams.set(
+        "fields",
+        "id,title,description,status,creation_time"
+      );
+      liveVideosUrl.searchParams.set("limit", "25");
+      liveVideosUrl.searchParams.set(
+        "access_token",
+        pageAccessToken
+      );
+
+      const liveVideosData = await readFacebookJson(
+        liveVideosUrl.toString()
+      );
+
+      const liveVideos = Array.isArray(liveVideosData.data)
+        ? liveVideosData.data
+        : [];
+
+      const activeLiveVideo = liveVideos.find(
+        (video) =>
+          String(video.status || "").toUpperCase() === "LIVE_NOW"
+      );
+
+      if (activeLiveVideo) {
+        return response.json({
+          ok: true,
+          connected: true,
+          live: true,
+          page: {
+            id: pageId,
+            name: pageName,
+          },
+          liveVideo: {
+            id: String(activeLiveVideo.id || ""),
+            title: String(
+              activeLiveVideo.title ||
+                activeLiveVideo.description ||
+                "Facebook Live"
+            ),
+            status: String(
+              activeLiveVideo.status || "LIVE_NOW"
+            ),
+            creationTime: String(
+              activeLiveVideo.creation_time || ""
+            ),
+          },
+        });
+      }
+    }
+
+    return response.json({
+      ok: true,
+      connected: true,
+      live: false,
+      status:
+        "Facebook is connected, but no active Facebook Live video was found.",
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not check Facebook Live status.";
+
+    console.error("Facebook Live detection error:", message);
+
+    return response.status(500).json({
+      ok: false,
+      connected: true,
+      live: false,
+      error: message,
+    });
+  }
+});
 app.post("/api/facebook/disconnect", (request, response) => {
   facebookConnection = {
     connected: false,
@@ -727,4 +840,5 @@ app.use((error, request, response, next) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
 });
+
 
