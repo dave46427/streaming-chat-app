@@ -9,6 +9,13 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
 
+      workbox: {
+        navigateFallbackDenylist: [
+          /^\/auth\//,
+          /^\/api\//
+        ]
+      },
+
       manifest: {
         name: "DavaBridge",
         short_name: "DavaBridge",
