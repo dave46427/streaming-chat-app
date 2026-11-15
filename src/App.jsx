@@ -90,10 +90,33 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
         </div>
         <form onSubmit={(event) => { event.preventDefault(); onSend(); }} style={{ display: "flex", gap: 8, padding: "10px", borderTop: "3px solid #394968", background: "linear-gradient(180deg, #202b49 0%, #0d1428 72%, #080c18 100%)", flexWrap: "wrap", boxShadow: "inset 0 3px 0 rgba(255,255,255,.12), inset 0 -5px 12px rgba(0,0,0,.48), 0 -8px 18px rgba(0,0,0,.38)", position: "relative", zIndex: 2 }}>
           <label htmlFor="send-target" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Send message to</label><select id="send-target" aria-label="Send message to platform" value={sendTarget} onChange={(event) => setSendTarget(event.target.value)} style={{ padding: "11px 13px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#080b15", borderLeftColor: "#080b15", borderRightColor: "#536181", borderBottomColor: "#536181", background: "linear-gradient(180deg, #10172b 0%, #1d2947 100%)", color: "white", fontWeight: 700, boxShadow: "inset 0 4px 8px rgba(0,0,0,.72), 0 2px 0 rgba(255,255,255,.12)" }}>
-            <option value="twitch">Twitch</option><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="both">Twitch + YouTube</option><option value="all">All Sendable Platforms</option>
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="both">Twitch + YouTube</option>
+            <option value="all">All Sendable Platforms</option>
           </select>
           <label htmlFor="live-chat-message" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Live chat message</label><input ref={messageInputRef} id="live-chat-message" aria-label="Live chat message. Press Alt plus L to focus this box" maxLength={500} value={messageText} onChange={(event) => setMessageText(expandEmojiWords(cleanChatText(event.target.value)))} placeholder="Start typing... (try: fire)" style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#070a13", borderLeftColor: "#070a13", borderRightColor: "#526181", borderBottomColor: "#526181", background: "linear-gradient(180deg, #0b1122 0%, #182440 100%)", color: "white", fontSize: "1rem", boxShadow: "inset 0 5px 10px rgba(0,0,0,.78), inset 0 -1px 0 rgba(255,255,255,.1), 0 2px 0 rgba(255,255,255,.1)", outline: "none" }} />
-          <button type="submit" disabled={!canSend} style={{ ...liveButtonStyle, background: canSend ? accentColor : "#4b5063", cursor: canSend ? "pointer" : "not-allowed" }}>{sendTarget === "youtube" ? "SEND TO YOUTUBE" : sendTarget === "twitch" ? "SEND TO TWITCH" : sendTarget === "tiktok" ? "SEND TO TIKTOK" : "SEND"}</button>
+          <button
+            type="submit"
+            disabled={!canSend}
+            style={{
+              ...liveButtonStyle,
+              background: canSend ? accentColor : "#4b5063",
+              cursor: canSend ? "pointer" : "not-allowed",
+            }}
+          >
+            {sendTarget === "youtube"
+              ? "SEND TO YOUTUBE"
+              : sendTarget === "twitch"
+                ? "SEND TO TWITCH"
+                : sendTarget === "tiktok"
+                  ? "SEND TO TIKTOK"
+                  : sendTarget === "facebook"
+                    ? "SEND TO FACEBOOK"
+                    : "SEND"}
+          </button>
         </form>
       </section>
     </main>
@@ -631,11 +654,60 @@ if (data.type === "tiktok_like") {
 
   const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("twitch_access_token"); if (!text || !token || !twitchUser?.broadcaster_user_id) throw new Error("Twitch is not ready to send."); const response = await fetch("https://api.twitch.tv/helix/chat/messages", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Client-Id": TWITCH_CLIENT_ID, "Content-Type": "application/json" }, body: JSON.stringify({ broadcaster_id: twitchUser.broadcaster_user_id, sender_id: twitchUser.user_id, message: text }) }); const result = await response.json(); if (!response.ok || !result.data?.[0]?.is_sent) throw new Error(result.data?.[0]?.drop_reason?.message || "Twitch message was not sent"); };
   const sendYouTubeMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("youtube_access_token"); if (!text || !token || !youtubeLiveChatId) throw new Error("YouTube is not ready to send."); const response = await fetch(`${YOUTUBE_API}/liveChat/messages?part=snippet`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ snippet: { liveChatId: youtubeLiveChatId, type: "textMessageEvent", textMessageDetails: { messageText: text } } }) }); if (!response.ok) { const details = await response.text(); throw new Error(details || "YouTube message was not sent"); } };
+  const sendFacebookMessage = async (textOverride) => {
+    const text = (textOverride ?? chatInput).trim();
+    if (!text) throw new Error("Enter a Facebook message first.");
+    if (!facebookConnected) throw new Error("Facebook is not connected.");
+
+    const response = await fetch("/api/facebook/send-message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.ok === false || !data.sent) {
+      throw new Error(data.error || "Facebook message was not sent.");
+    }
+    setFacebookStatus(data.status || "Facebook message sent.");
+  };
   const sendTikTokMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const socket = tiktokSocketRef.current; if (!text) throw new Error("Enter a TikTok message first."); if (!tiktokConnected || !socket || socket.readyState !== WebSocket.OPEN) throw new Error("TikTok is not ready to send."); socket.send(JSON.stringify({ type: "send_tiktok_message", text })); };
-  const sendSelectedMessage = async () => { const text = cleanChatText(expandEmojiWords(chatInput)).trim(); if (!text) return; try { if (sendTarget === "twitch") await sendTwitchMessage(text); if (sendTarget === "youtube") await sendYouTubeMessage(text); if (sendTarget === "tiktok") await sendTikTokMessage(text); if (sendTarget === "both") await Promise.all([sendTwitchMessage(text), sendYouTubeMessage(text)]); if (sendTarget === "all") { const sends = []; if (twitchConnected && activeChannel) sends.push(sendTwitchMessage(text)); if (youtubeConnected && youtubeLiveChatId) sends.push(sendYouTubeMessage(text)); if (!sends.length) throw new Error("No chat platforms are ready to send."); await Promise.all(sends); } setChatInput(""); } catch (error) { if (sendTarget === "youtube") setYoutubeStatus(`Send failed: ${error.message}`); else if (sendTarget === "tiktok" || sendTarget === "all") setTiktokStatus(`Send failed: ${error.message}`); else setTwitchStatus(`Send failed: ${error.message}`); } };
+  const sendSelectedMessage = async () => {
+    const text = cleanChatText(expandEmojiWords(chatInput)).trim();
+    if (!text) return;
+
+    try {
+      if (sendTarget === "twitch") await sendTwitchMessage(text);
+      if (sendTarget === "youtube") await sendYouTubeMessage(text);
+      if (sendTarget === "tiktok") await sendTikTokMessage(text);
+      if (sendTarget === "facebook") await sendFacebookMessage(text);
+      if (sendTarget === "both") await Promise.all([sendTwitchMessage(text), sendYouTubeMessage(text)]);
+      if (sendTarget === "all") {
+        const sends = [];
+        if (twitchConnected && activeChannel) sends.push(sendTwitchMessage(text));
+        if (youtubeConnected && youtubeLiveChatId) sends.push(sendYouTubeMessage(text));
+        if (facebookConnected) sends.push(sendFacebookMessage(text));
+        if (!sends.length) throw new Error("No chat platforms are ready to send.");
+        await Promise.all(sends);
+      }
+      setChatInput("");
+    } catch (error) {
+      if (sendTarget === "facebook") setFacebookStatus(`Send failed: ${error.message}`);
+      else if (sendTarget === "youtube") setYoutubeStatus(`Send failed: ${error.message}`);
+      else if (sendTarget === "tiktok") setTiktokStatus(`Send failed: ${error.message}`);
+      else if (sendTarget === "all") setFacebookStatus(`Send failed: ${error.message}`);
+      else setTwitchStatus(`Send failed: ${error.message}`);
+    }
+  };
 
   const enabled = useMemo(() => platforms.filter((p) => p.enabled), [platforms]); const ready = enabled.length > 0 && enabled.every((p) => p.key.trim().length > 5); const update = (id, patch) => setPlatforms((items) => items.map((p) => p.id === id ? { ...p, ...patch } : p)); const finishSetup = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); setSetupComplete(true); };
-  const canSend = Boolean(chatInput.trim()) && ((sendTarget === "twitch" && twitchConnected && activeChannel) || (sendTarget === "youtube" && youtubeConnected && youtubeLiveChatId) || (sendTarget === "tiktok" && tiktokConnected) || (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId) || (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId))));
+  const canSend = Boolean(chatInput.trim()) && (
+    (sendTarget === "twitch" && twitchConnected && activeChannel) ||
+    (sendTarget === "youtube" && youtubeConnected && youtubeLiveChatId) ||
+    (sendTarget === "tiktok" && tiktokConnected) ||
+    (sendTarget === "facebook" && facebookConnected) ||
+    (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId) ||
+    (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId) || facebookConnected))
+  );
   if (safetyPage) {
     const safetyContent = {
       privacy: {

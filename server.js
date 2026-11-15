@@ -157,6 +157,7 @@ app.get("/auth/facebook", (request, response) => {
       "pages_show_list",
       "pages_read_engagement",
       "pages_read_user_content",
+"pages_manage_engagement",
     ].join(",")
   );
 
@@ -417,6 +418,141 @@ app.get("/api/facebook/live-status", async (request, response) => {
   }
 });
 app.post("/api/facebook/disconnect", (request, response) => {
+/*
+ * Sends a comment to the active Facebook Live video.
+ * The Page access token remains on the server.
+ */
+app.post("/api/facebook/send-message", async (request, response) => {
+  const message = String(request.body?.message || "")
+    .replace(
+      /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+      ""
+    )
+    .trim()
+    .slice(0, 500);
+
+  if (!message) {
+    return response.status(400).json({
+      ok: false,
+      sent: false,
+      error: "Enter a Facebook message first.",
+    });
+  }
+
+  if (!facebookConnection.connected) {
+    return response.status(401).json({
+      ok: false,
+      sent: false,
+      error: "Facebook is not connected.",
+    });
+  }
+
+  const pages = Array.isArray(facebookConnection.pages)
+    ? facebookConnection.pages
+    : [];
+
+  if (pages.length === 0) {
+    return response.status(404).json({
+      ok: false,
+      sent: false,
+      error: "No Facebook Pages were found.",
+    });
+  }
+
+  try {
+    for (const page of pages) {
+      const pageId = String(page.id || "");
+      const pageName = String(page.name || "Facebook Page");
+      const pageAccessToken = String(page.access_token || "");
+
+      if (!pageId || !pageAccessToken) {
+        continue;
+      }
+
+      const liveVideosUrl = new URL(
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${pageId}/live_videos`
+      );
+
+      liveVideosUrl.searchParams.set(
+        "fields",
+        "id,title,description,status,creation_time"
+      );
+      liveVideosUrl.searchParams.set("limit", "25");
+      liveVideosUrl.searchParams.set(
+        "access_token",
+        pageAccessToken
+      );
+
+      const liveVideosData = await readFacebookJson(
+        liveVideosUrl.toString()
+      );
+
+      const liveVideos = Array.isArray(liveVideosData.data)
+        ? liveVideosData.data
+        : [];
+
+      const activeLiveVideo = liveVideos.find(
+        (video) =>
+          String(video.status || "").toUpperCase() === "LIVE_NOW"
+      );
+
+      if (!activeLiveVideo?.id) {
+        continue;
+      }
+
+      const commentsUrl =
+        `https://graph.facebook.com/` +
+        `${FACEBOOK_GRAPH_VERSION}/` +
+        `${encodeURIComponent(String(activeLiveVideo.id))}/comments`;
+
+      const commentBody = new URLSearchParams({
+        message,
+        access_token: pageAccessToken,
+      });
+
+      const commentData = await readFacebookJson(commentsUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        body: commentBody.toString(),
+      });
+
+      return response.json({
+        ok: true,
+        sent: true,
+        status: `Message sent to ${pageName}.`,
+        page: {
+          id: pageId,
+          name: pageName,
+        },
+        liveVideoId: String(activeLiveVideo.id),
+        commentId: String(commentData.id || ""),
+      });
+    }
+
+    return response.status(404).json({
+      ok: false,
+      sent: false,
+      error:
+        "Facebook is connected, but no active Facebook Live video was found.",
+    });
+  } catch (error) {
+    const messageText =
+      error instanceof Error
+        ? error.message
+        : "The Facebook message could not be sent.";
+
+    console.error("Facebook Live send error:", messageText);
+
+    return response.status(500).json({
+      ok: false,
+      sent: false,
+      error: messageText,
+    });
+  }
+});
   facebookConnection = {
     connected: false,
     userAccessToken: "",
