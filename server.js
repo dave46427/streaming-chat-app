@@ -13,7 +13,7 @@ const app = express();
 const server = createServer(app);
 const PORT = Number(process.env.PORT || 3000);
 const DIST_FOLDER = path.join(__dirname, "dist");
-
+const WEBSITE_FILE = path.join(__dirname, "public", "website.html");
 const EULER_API_KEY = process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
 const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
 const FACEBOOK_APP_SECRET = String(process.env.FACEBOOK_APP_SECRET || "").trim();
@@ -266,7 +266,11 @@ app.post("/api/facebook/send-message", async (request, response) => {
     return response.status(500).json({ ok: false, sent: false, error: messageText });
   }
 });
-
+app.get(["/website", "/website.html"], (request, response, next) => {
+  response.sendFile(WEBSITE_FILE, (error) => {
+    if (error) next(error);
+  });
+});
 app.use(express.static(DIST_FOLDER));
 
 const websocketServer = new WebSocketServer({ server, path: "/ws" });
