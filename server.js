@@ -116,7 +116,7 @@ async function readFacebookJson(url, options = {}) {
 app.get("/api/health", (request, response) => {
   response.json({
     ok: true,
-    service: "DavaBridge",
+    service: "StreamBridge",
     eulerApiKeyLoaded: Boolean(EULER_API_KEY),
     facebookCredentialsLoaded: Boolean(
       FACEBOOK_APP_ID && FACEBOOK_APP_SECRET
@@ -302,7 +302,121 @@ app.get("/api/facebook/status", (request, response) => {
     ...publicFacebookConnection(),
   });
 });
+/*
+ * Finds the current Facebook Live video for the connected Page.
+ * Page access tokens stay safely on the server.
+ */
+app.get("/api/facebook/live-status", async (request, response) => {
+  if (!facebookConnection.connected) {
+    return response.status(401).json({
+      ok: false,
+      connected: false,
+      live: false,
+      error: "Facebook is not connected."
+    });
+  }
 
+  const pages = Array.isArray(facebookConnection.pages)
+    ? facebookConnection.pages
+    : [];
+
+  if (pages.length === 0) {
+    return response.status(404).json({
+      ok: false,
+      connected: true,
+      live: false,
+      error: "No Facebook Pages were found for this account."
+    });
+  }
+
+  try {
+    for (const page of pages) {
+      const pageId = String(page.id || "");
+      const pageName = String(page.name || "Facebook Page");
+      const pageAccessToken = String(page.access_token || "");
+
+      if (!pageId || !pageAccessToken) {
+        continue;
+      }
+
+      const liveVideosUrl = new URL(
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${pageId}/live_videos`
+      );
+
+      liveVideosUrl.searchParams.set(
+        "fields",
+        "id,title,description,status,creation_time,permalink_url"
+      );
+      liveVideosUrl.searchParams.set("limit", "25");
+      liveVideosUrl.searchParams.set(
+        "access_token",
+        pageAccessToken
+      );
+
+      const liveVideosData = await readFacebookJson(
+        liveVideosUrl.toString()
+      );
+
+      const liveVideos = Array.isArray(liveVideosData.data)
+        ? liveVideosData.data
+        : [];
+
+      const activeLiveVideo = liveVideos.find(
+        (video) => String(video.status || "").toUpperCase() === "LIVE_NOW"
+      );
+
+      if (activeLiveVideo) {
+        return response.json({
+          ok: true,
+          connected: true,
+          live: true,
+          page: {
+            id: pageId,
+            name: pageName
+          },
+          liveVideo: {
+            id: String(activeLiveVideo.id || ""),
+            title: String(
+              activeLiveVideo.title ||
+              activeLiveVideo.description ||
+              "Facebook Live"
+            ),
+            status: String(activeLiveVideo.status || "LIVE_NOW"),
+            creationTime: String(
+              activeLiveVideo.creation_time || ""
+            ),
+            permalinkUrl: String(
+              activeLiveVideo.permalink_url || ""
+            )
+          }
+        });
+      }
+    }
+
+    return response.json({
+      ok: true,
+      connected: true,
+      live: false,
+      pageCount: pages.length,
+      status:
+        "Facebook is connected, but no active Facebook Live video was found."
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not check Facebook Live status.";
+
+    console.error("Facebook Live detection error:", message);
+
+    return response.status(500).json({
+      ok: false,
+      connected: true,
+      live: false,
+      error: message
+    });
+  }
+});
 app.post("/api/facebook/disconnect", (request, response) => {
   facebookConnection = {
     connected: false,
@@ -317,7 +431,7 @@ app.post("/api/facebook/disconnect", (request, response) => {
   response.json({
     ok: true,
     connected: false,
-    status: "Facebook disconnected from DavaBridge.",
+    status: "Facebook disconnected from StreamBridge.",
   });
 });
 
@@ -500,7 +614,6 @@ data?.roomInfo?.userCount ??
   });
 
   connection.on(WebcastEvent.GIFT, (data) => {
-    console.log("TIKTOK GIFT EVENT RECEIVED:", JSON.stringify(data, null, 2));
     const giftUsername =
       data?.user?.displayId ||
       data?.user?.uniqueId ||
@@ -619,7 +732,7 @@ websocketServer.on("connection", (socket) => {
   sendJson(socket, {
     type: "server_status",
     connected: true,
-    status: "Connected to the DavaBridge server.",
+    status: "Connected to the StreamBridge server.",
   });
 
   socket.on("message", async (rawMessage) => {
@@ -652,14 +765,14 @@ websocketServer.on("connection", (socket) => {
 
       sendJson(socket, {
         type: "server_error",
-        message: "Unknown DavaBridge command.",
+        message: "Unknown StreamBridge command.",
       });
     } catch (error) {
       console.error("WebSocket message error:", error);
 
       sendJson(socket, {
         type: "server_error",
-        message: "The DavaBridge server could not read that command.",
+        message: "The StreamBridge server could not read that command.",
       });
     }
   });
@@ -671,26 +784,19 @@ websocketServer.on("connection", (socket) => {
   });
 
   socket.on("error", (error) => {
-    console.error("DavaBridge WebSocket error:", error);
+    console.error("StreamBridge WebSocket error:", error);
   });
 });
 
-app.get("/terms.html", (request, response, next) => {
-  response.sendFile(path.join(DIST_FOLDER, "terms.html"), (error) => {
-    if (error) {
-      next(error);
-    }
-  });
-});
 /*
  * React single-page application fallback.
  * API, OAuth and WebSocket requests are handled before this point.
  */
-app.use((request, response, next) => {
+
   if (
     request.path.startsWith("/api/") ||
     request.path.startsWith("/auth/")
-  ) {
+  ) {app.use((request, response, next) => {
     return next();
   }
 
@@ -707,12 +813,12 @@ app.use((request, response, next) => {
 app.use((request, response) => {
   response.status(404).json({
     ok: false,
-    error: "DavaBridge route not found.",
+    error: "StreamBridge route not found.",
   });
 });
 
 app.use((error, request, response, next) => {
-  console.error("DavaBridge server error:", error);
+  console.error("StreamBridge server error:", error);
 
   if (response.headersSent) {
     return next(error);
@@ -720,11 +826,10 @@ app.use((error, request, response, next) => {
 
   response.status(500).json({
     ok: false,
-    error: "DavaBridge server error.",
+    error: "StreamBridge server error.",
   });
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`DavaBridge server is running on port ${PORT}`);
+  console.log(`StreamBridge server is running on port ${PORT}`);
 });
-
