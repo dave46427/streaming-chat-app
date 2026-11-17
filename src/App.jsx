@@ -250,7 +250,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "Ã°Å¸â€˜â€¹ joined the LIVE",
+      text: "👋 joined the LIVE",
     },
   ].slice(-100));
 }
@@ -262,7 +262,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `Ã¢ÂÂ¤Ã¯Â¸Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} Ã¢â‚¬Â¢ Total ${Number(data.total || 0)}`,
+      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -287,9 +287,13 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `?? sent ${giftName} Ã—${giftCount}`,
+                text: `🎁 sent ${giftName} ×${giftCount}`,
               },
             ].slice(-100));
+          }
+          if (data.type === "facebook_status") {
+            setFacebookConnected(Boolean(data.connected));
+            setFacebookStatus(data.status || (data.connected ? "Facebook connected" : "Facebook not connected"));
           }
           if (data.type === "chat_message" && data.message) {
             const msg = { ...data.message, username: cleanChatText(data.message.username).slice(0, 80), text: cleanChatText(data.message.text) };
@@ -655,20 +659,28 @@ if (data.type === "tiktok_like") {
   const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("twitch_access_token"); if (!text || !token || !twitchUser?.broadcaster_user_id) throw new Error("Twitch is not ready to send."); const response = await fetch("https://api.twitch.tv/helix/chat/messages", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Client-Id": TWITCH_CLIENT_ID, "Content-Type": "application/json" }, body: JSON.stringify({ broadcaster_id: twitchUser.broadcaster_user_id, sender_id: twitchUser.user_id, message: text }) }); const result = await response.json(); if (!response.ok || !result.data?.[0]?.is_sent) throw new Error(result.data?.[0]?.drop_reason?.message || "Twitch message was not sent"); };
   const sendYouTubeMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("youtube_access_token"); if (!text || !token || !youtubeLiveChatId) throw new Error("YouTube is not ready to send."); const response = await fetch(`${YOUTUBE_API}/liveChat/messages?part=snippet`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ snippet: { liveChatId: youtubeLiveChatId, type: "textMessageEvent", textMessageDetails: { messageText: text } } }) }); if (!response.ok) { const details = await response.text(); throw new Error(details || "YouTube message was not sent"); } };
   const sendFacebookMessage = async (textOverride) => {
-    const text = (textOverride ?? chatInput).trim();
+    const text = cleanChatText(textOverride ?? chatInput).trim();
     if (!text) throw new Error("Enter a Facebook message first.");
     if (!facebookConnected) throw new Error("Facebook is not connected.");
 
+    setFacebookStatus("Sending Facebook Live comment...");
     const response = await fetch("/api/facebook/send-message", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
     });
-    const data = await response.json().catch(() => ({}));
+
+    const raw = await response.text();
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
+
     if (!response.ok || data.ok === false || !data.sent) {
-      throw new Error(data.error || "Facebook message was not sent.");
+      const detail = data.error || raw || `Facebook returned HTTP ${response.status}.`;
+      throw new Error(detail);
     }
+
     setFacebookStatus(data.status || "Facebook message sent.");
+    return data;
   };
   const sendTikTokMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const socket = tiktokSocketRef.current; if (!text) throw new Error("Enter a TikTok message first."); if (!tiktokConnected || !socket || socket.readyState !== WebSocket.OPEN) throw new Error("TikTok is not ready to send."); socket.send(JSON.stringify({ type: "send_tiktok_message", text })); };
   const sendSelectedMessage = async () => {

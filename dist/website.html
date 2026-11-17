@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>DavaBridge | All Your Chats. One Place.</title>
+
+  <meta
+    name="description"
+    content="DavaBridge brings your supported live-stream chats together in one simple place."
+  >
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% 0%, #0d2940 0%, #07111f 38%, #030811 100%);
+      color: #e8f0f7;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      min-height: 100vh;
+    }
+
+    header {
+      width: 100%;
+      border-bottom: 1px solid rgba(53, 215, 255, 0.15);
+      background: rgba(3, 8, 17, 0.9);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav {
+      max-width: 1120px;
+      margin: 0 auto;
+      min-height: 76px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 25px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+
+    .brand img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 0 18px rgba(53, 215, 255, 0.18);
+    }
+
+    .brand span {
+      color: #ffffff;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+
+    nav a {
+      color: #b7c7d8;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      transition: color 0.2s ease;
+    }
+
+    nav a:hover {
+      color: #35d7ff;
+    }
+
+    .beta-nav {
+      color: #35d7ff !important;
+    }
+
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 90px 24px 75px;
+      text-align: center;
+    }
+
+    .hero-logo {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 28px;
+      box-shadow:
+        0 0 30px rgba(53, 215, 255, 0.22),
+        0 0 70px rgba(53, 215, 255, 0.08);
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: table;
+      margin: 0 auto 22px;
+      padding: 7px 14px;
+      border: 1px solid rgba(53, 215, 255, 0.32);
+      border-radius: 999px;
+      color: #74e4ff;
+      background: rgba(53, 215, 255, 0.07);
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 8vw, 78px);
+      line-height: 1.02;
+      letter-spacing: -2px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #ffffff, #35d7ff, #8cecff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 25px auto 0;
+      color: #aebfd0;
+      font-size: 19px;
+    }
+
+    .actions {
+      margin-top: 35px;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      display: inline-block;
+      min-width: 170px;
+      padding: 14px 22px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 800;
+      transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .primary {
+      background: #35d7ff;
+      color: #02111b;
+      box-shadow: 0 0 24px rgba(53, 215, 255, 0.2);
+    }
+
+    .primary:hover {
+      background: #78e8ff;
+      transform: translateY(-2px);
+      box-shadow: 0 0 32px rgba(53, 215, 255, 0.32);
+    }
+
+    .secondary {
+      border: 1px solid #23435d;
+      color: #d9e6f2;
+      background: #0b1724;
+    }
+
+    .secondary:hover {
+      border-color: #35d7ff;
+      color: #ffffff;
+      transform: translateY(-2px);
+    }
+
+    section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 70px 24px;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 42px;
+    }
+
+    .section-title h2 {
+      margin: 0 0 12px;
+      color: #ffffff;
+      font-size: 34px;
+    }
+
+    .section-title p {
+      max-width: 690px;
+      margin: 0 auto;
+      color: #94a8bb;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: linear-gradient(145deg, #0c1a28, #09131e);
+      border: 1px solid #163248;
+      border-radius: 16px;
+      padding: 28px;
+      min-height: 210px;
+      transition:
+        transform 0.25s ease,
+        border-color 0.25s ease,
+        box-shadow 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(53, 215, 255, 0.48);
+      box-shadow:
+        0 16px 35px rgba(0, 0, 0, 0.25),
+        0 0 24px rgba(53, 215, 255, 0.06);
+    }
+
+    .card-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(53, 215, 255, 0.09);
+      border: 1px solid rgba(53, 215, 255, 0.2);
+      color: #35d7ff;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      color: #ffffff;
+      font-size: 20px;
+    }
+
+    .card p {
+      margin: 0;
+      color: #94a8bb;
+    }
+
+    .platform-box {
+      margin-top: 22px;
+      padding: 34px 30px;
+      border-radius: 18px;
+      border: 1px solid #163248;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(53, 215, 255, 0.04),
+          transparent 65%
+        ),
+        #08131f;
+      text-align: center;
+    }
+
+    .platform-label {
+      display: block;
+      color: #ffffff;
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+
+    .platforms {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .platform {
+      padding: 10px 16px;
+      background: #0d1b2a;
+      border: 1px solid #1b3a52;
+      border-radius: 999px;
+      color: #dbe7f2;
+      font-weight: bold;
+    }
+
+    .platform-dot {
+      color: #35d7ff;
+      margin-right: 7px;
+    }
+
+    .coming {
+      color: #70879a;
+    }
+
+    .coming .platform-dot {
+      color: #70879a;
+    }
+
+    /* BETA */
+
+    .beta {
+      text-align: center;
+      border: 1px solid rgba(53, 215, 255, 0.35);
+      border-radius: 24px;
+      padding: 58px 30px;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(53, 215, 255, 0.13),
+          transparent 65%
+        ),
+        #08131f;
+      box-shadow: 0 0 45px rgba(53, 215, 255, 0.05);
+    }
+
+    .beta-badge {
+      display: inline-block;
+      margin-bottom: 16px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(53, 215, 255, 0.1);
+      border: 1px solid rgba(53, 215, 255, 0.35);
+      color: #74e4ff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .beta h2 {
+      margin: 0 0 14px;
+      color: #ffffff;
+      font-size: 38px;
+    }
+
+    .beta-intro {
+      max-width: 700px;
+      margin: 0 auto;
+      color: #aebfd0;
+      font-size: 18px;
+    }
+
+    .beta-list {
+      max-width: 560px;
+      margin: 30px auto;
+      text-align: left;
+      display: grid;
+      gap: 12px;
+    }
+
+    .beta-item {
+      padding: 13px 16px;
+      background: rgba(10, 27, 42, 0.72);
+      border: 1px solid #163248;
+      border-radius: 10px;
+      color: #c7d6e4;
+    }
+
+    .beta-check {
+      color: #35d7ff;
+      font-weight: bold;
+      margin-right: 9px;
+    }
+
+    .beta-note {
+      max-width: 650px;
+      margin: 0 auto 26px;
+      color: #8fa5b8;
+      font-size: 15px;
+    }
+
+    .cta {
+      text-align: center;
+      border: 1px solid rgba(53, 215, 255, 0.22);
+      border-radius: 22px;
+      padding: 52px 25px;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(53, 215, 255, 0.09),
+          transparent 65%
+        ),
+        #08131f;
+    }
+
+    .cta-badge {
+      display: inline-block;
+      margin-bottom: 16px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(53, 215, 255, 0.08);
+      border: 1px solid rgba(53, 215, 255, 0.25);
+      color: #74e4ff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+    }
+
+    .cta h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: #ffffff;
+      font-size: 34px;
+    }
+
+    .cta p {
+      color: #9db0c2;
+      max-width: 670px;
+      margin: 0 auto 25px;
+    }
+
+    footer {
+      border-top: 1px solid #132b3f;
+      margin-top: 60px;
+      background: #030811;
+    }
+
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 22px;
+      flex-wrap: wrap;
+      color: #71869a;
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: #8ca1b5;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: #35d7ff;
+    }
+
+    @media (max-width: 800px) {
+      nav {
+        display: none;
+      }
+
+      .nav {
+        justify-content: center;
+      }
+
+      .hero {
+        padding: 60px 20px 50px;
+      }
+
+      .hero-logo {
+        width: 110px;
+        height: 110px;
+        border-radius: 24px;
+      }
+
+      h1 {
+        letter-spacing: -1px;
+      }
+
+      .hero p {
+        font-size: 17px;
+      }
+
+      section {
+        padding: 55px 20px;
+      }
+
+      .section-title h2,
+      .cta h2,
+      .beta h2 {
+        font-size: 29px;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        min-height: auto;
+      }
+
+      .button {
+        width: 100%;
+        max-width: 330px;
+      }
+
+      .platform-box,
+      .beta {
+        padding: 35px 18px;
+      }
+
+      .footer-inner {
+        justify-content: center;
+        text-align: center;
+      }
+
+      .footer-links {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .brand {
+        font-size: 20px;
+      }
+
+      .brand img {
+        width: 43px;
+        height: 43px;
+      }
+
+      .hero-logo {
+        width: 100px;
+        height: 100px;
+      }
+
+      .hero p,
+      .beta-intro {
+        font-size: 16px;
+      }
+
+      .platform {
+        font-size: 14px;
+        padding: 9px 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <header>
+    <div class="nav">
+
+      <a class="brand" href="website.html">
+        <img src="davabridge-icon.png" alt="DavaBridge logo">
+        <span>DavaBridge</span>
+      </a>
+
+      <nav aria-label="Main navigation">
+        <a href="#about">About</a>
+        <a href="#features">Features</a>
+        <a href="#platforms">Platforms</a>
+        <a class="beta-nav" href="#beta">Join Beta</a>
+        <a href="privacy.html">Privacy</a>
+      </nav>
+
+    </div>
+  </header>
+
+  <main>
+
+    <!-- HERO -->
+
+    <section class="hero" id="about">
+
+      <img
+        class="hero-logo"
+        src="davabridge-icon.png"
+        alt="DavaBridge"
+      >
+
+      <div class="badge">DavaBridge</div>
+
+      <h1>
+        <span class="gradient-text">All your chats.</span><br>
+        One place.
+      </h1>
+
+      <p>
+        Connect your streaming platforms and bring your live chats together
+        in one simple place. Spend less time switching platforms and more
+        time with your community.
+      </p>
+
+      <div class="actions">
+
+        <a class="button primary" href="#beta">
+          Join the Beta
+        </a>
+
+        <a class="button secondary" href="#features">
+          See What DavaBridge Does
+        </a>
+
+      </div>
+
+    </section>
+
+    <!-- FEATURES -->
+
+    <section id="features">
+
+      <div class="section-title">
+
+        <h2>One place for your communities</h2>
+
+        <p>
+          DavaBridge is designed around a simple idea: bring your supported
+          live chats together so you can spend less time jumping between
+          platforms and more time interacting with your community.
+        </p>
+
+      </div>
+
+      <div class="cards">
+
+        <div class="card">
+
+          <div class="card-icon">◆</div>
+
+          <h3>Combined Chat</h3>
+
+          <p>
+            Bring supported live-stream chats together into one clear,
+            streamlined experience.
+          </p>
+
+        </div>
+
+        <div class="card">
+
+          <div class="card-icon">↔</div>
+
+          <h3>Connect Platforms</h3>
+
+          <p>
+            Connect supported streaming services and keep your platform
+            connections together through DavaBridge.
+          </p>
+
+        </div>
+
+        <div class="card">
+
+          <div class="card-icon">●</div>
+
+          <h3>Built for Live Streaming</h3>
+
+          <p>
+            A focused experience for creators who want their supported
+            live conversations accessible in one place.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- PLATFORMS -->
+
+    <section id="platforms">
+
+      <div class="section-title">
+
+        <h2>Your streams. Your communities.</h2>
+
+        <p>
+          DavaBridge is being developed to bring multiple live-streaming
+          platform connections into one central experience.
+        </p>
+
+      </div>
+
+      <div class="platform-box">
+
+        <strong class="platform-label">
+          Platform integrations
+        </strong>
+
+        <div class="platforms">
+
+          <span class="platform">
+            <span class="platform-dot">●</span>Twitch
+          </span>
+
+          <span class="platform">
+            <span class="platform-dot">●</span>YouTube
+          </span>
+
+          <span class="platform">
+            <span class="platform-dot">●</span>TikTok
+          </span>
+
+          <span class="platform">
+            <span class="platform-dot">●</span>Facebook Live
+          </span>
+
+          <span class="platform coming">
+            <span class="platform-dot">●</span>More planned
+          </span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- BETA TESTING -->
+
+    <section id="beta">
+
+      <div class="beta">
+
+        <div class="beta-badge">
+          Beta Testers Wanted
+        </div>
+
+        <h2>Help shape DavaBridge</h2>
+
+        <p class="beta-intro">
+          DavaBridge is getting closer, and we're looking for streamers
+          and creators to help test it before launch.
+        </p>
+
+        <div class="beta-list">
+
+          <div class="beta-item">
+            <span class="beta-check">✓</span>
+            Try DavaBridge during real or test streams
+          </div>
+
+          <div class="beta-item">
+            <span class="beta-check">✓</span>
+            Connect the streaming platforms you use
+          </div>
+
+          <div class="beta-item">
+            <span class="beta-check">✓</span>
+            Test the Combined Chat
+          </div>
+
+          <div class="beta-item">
+            <span class="beta-check">✓</span>
+            Report bugs or anything that doesn't work properly
+          </div>
+
+          <div class="beta-item">
+            <span class="beta-check">✓</span>
+            Tell us what could make DavaBridge better
+          </div>
+
+        </div>
+
+        <p class="beta-note">
+          You don't need to be a tech expert. Honest feedback is exactly
+          what we need to make DavaBridge better.
+        </p>
+
+        <div class="actions">
+
+          <a
+            class="button primary"
+            href="https://streaming-chat-app-production-dc88.up.railway.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open DavaBridge Beta
+          </a>
+
+          <a
+            class="button secondary"
+            href="https://forms.cloud.microsoft/r/90QqMq2a4w"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Give Beta Feedback
+          </a>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- DEVELOPMENT -->
+
+    <section>
+
+      <div class="cta">
+
+        <div class="cta-badge">
+          In Development
+        </div>
+
+        <h2>DavaBridge is taking shape</h2>
+
+        <p>
+          We're building DavaBridge step by step with one goal: make it
+          simpler for streamers to bring supported live chats and
+          communities together in one place.
+        </p>
+
+        <a class="button primary" href="privacy.html">
+          View Privacy Policy
+        </a>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+
+    <div class="footer-inner">
+
+      <div>
+        © 2026 DavaBridge. All rights reserved.
+      </div>
+
+      <div class="footer-links">
+
+        <a href="privacy.html">
+          Privacy Policy
+        </a>
+
+        <a href="terms.html">
+          Terms
+        </a>
+
+        <a href="data-deletion.html">
+          Data Deletion
+        </a>
+
+      </div>
+
+    </div>
+
+  </footer>
+
+</div>
+
+</body>
+</html>
