@@ -14,14 +14,22 @@ const server = createServer(app);
 const PORT = Number(process.env.PORT || 3000);
 const DIST_FOLDER = path.join(__dirname, "dist");
 const WEBSITE_FILE = path.join(__dirname, "public", "website.html");
+
 const EULER_API_KEY = process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
 const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
 const FACEBOOK_APP_SECRET = String(process.env.FACEBOOK_APP_SECRET || "").trim();
 const FACEBOOK_REDIRECT_URI = process.env.FACEBOOK_REDIRECT_URI ||
   "https://streaming-chat-app-production-dc88.up.railway.app/auth/facebook/callback";
 const FACEBOOK_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || "v25.0";
+const FACEBOOK_POLL_INTERVAL_MS = Math.max(2500, Number(process.env.FACEBOOK_POLL_INTERVAL_MS || 4000));
 
 const facebookLoginStates = new Map();
+const seenFacebookCommentIds = new Set();
+let facebookPollTimer = null;
+let facebookPollBusy = false;
+let currentFacebookLiveId = "";
+let facebookInitialCommentsLoaded = false;
+
 let facebookConnection = {
   connected: false,
   userAccessToken: "",
@@ -46,7 +54,35 @@ if (FACEBOOK_APP_ID && FACEBOOK_APP_SECRET) {
 }
 
 app.disable("x-powered-by");
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+
+function cleanText(value) {
+  return String(value ?? "")
+    .normalize("NFC")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
+function repairMojibake(value) {
+  let text = cleanText(value);
+  if (!text) return "";
+
+  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ã, Â, â or ð.
+  if (/[ÃÂâð]/.test(text)) {
+    try {
+      const repaired = Buffer.from(text, "latin1").toString("utf8");
+      if (repaired && !repaired.includes("�")) text = repaired;
+    } catch {
+      // Keep the original text if conversion is not safe.
+    }
+  }
+
+  return cleanText(text);
+}
+
+function safeUsername(value, fallback) {
+  return repairMojibake(value) || fallback;
+}
 
 function publicFacebookConnection() {
   return {
@@ -87,6 +123,7 @@ app.get("/api/health", (request, response) => {
     eulerApiKeyLoaded: Boolean(EULER_API_KEY),
     facebookCredentialsLoaded: Boolean(FACEBOOK_APP_ID && FACEBOOK_APP_SECRET),
     facebookConnected: facebookConnection.connected,
+    facebookPolling: Boolean(facebookPollTimer),
   });
 });
 
@@ -109,9 +146,11 @@ app.get("/auth/facebook", (request, response) => {
     "pages_show_list",
     "pages_read_engagement",
     "pages_read_user_content",
+    "pages_manage_metadata",
     "pages_manage_engagement",
     "pages_manage_posts",
   ].join(","));
+
   return response.redirect(loginUrl.toString());
 });
 
@@ -120,17 +159,21 @@ app.get("/auth/facebook/callback", async (request, response) => {
   const state = String(request.query.state || "");
   const oauthError = String(request.query.error || "");
   const oauthErrorDescription = String(request.query.error_description || "");
+
   removeExpiredFacebookStates();
 
   if (oauthError) {
     facebookConnection.error = oauthErrorDescription || "Facebook login was cancelled.";
     return response.redirect(`/?facebook=error&message=${encodeURIComponent(facebookConnection.error)}`);
   }
+
   if (!state || !facebookLoginStates.has(state)) {
     facebookConnection.error = "Facebook login could not be verified. Please try connecting again.";
     return response.redirect(`/?facebook=error&message=${encodeURIComponent(facebookConnection.error)}`);
   }
+
   facebookLoginStates.delete(state);
+
   if (!code) {
     facebookConnection.error = "Facebook did not return an authorization code.";
     return response.redirect(`/?facebook=error&message=${encodeURIComponent(facebookConnection.error)}`);
@@ -160,17 +203,24 @@ app.get("/auth/facebook/callback", async (request, response) => {
       connected: true,
       userAccessToken,
       userId: String(profileData.id || ""),
-      userName: String(profileData.name || ""),
+      userName: repairMojibake(profileData.name),
       pages: Array.isArray(pagesData.data) ? pagesData.data : [],
       connectedAt: new Date().toISOString(),
       error: "",
     };
+
+    currentFacebookLiveId = "";
+    facebookInitialCommentsLoaded = false;
+    seenFacebookCommentIds.clear();
+    startFacebookPolling();
+
     console.log(`Facebook connected for ${facebookConnection.userName || "user"}.`);
     console.log(`Facebook Pages found: ${facebookConnection.pages.length}.`);
     return response.redirect("/?facebook=connected");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Facebook could not be connected.";
     console.error("Facebook OAuth error:", message);
+    stopFacebookPolling();
     facebookConnection = { connected: false, userAccessToken: "", userId: "", userName: "", pages: [], connectedAt: "", error: message };
     return response.redirect(`/?facebook=error&message=${encodeURIComponent(message)}`);
   }
@@ -191,12 +241,118 @@ async function findActiveFacebookLive() {
     liveVideosUrl.searchParams.set("limit", "25");
     liveVideosUrl.searchParams.set("access_token", pageAccessToken);
     const data = await readFacebookJson(liveVideosUrl.toString());
+
     const activeLiveVideo = (Array.isArray(data.data) ? data.data : []).find(
       (video) => String(video.status || "").toUpperCase() === "LIVE_NOW"
     );
+
     if (activeLiveVideo) return { page, pageId, pageAccessToken, activeLiveVideo };
   }
+
   return null;
+}
+
+function broadcastJson(data) {
+  const payload = JSON.stringify(data);
+  for (const client of websocketServer.clients) {
+    if (client.readyState === WebSocket.OPEN) client.send(payload);
+  }
+}
+
+function rememberFacebookComment(commentId) {
+  seenFacebookCommentIds.add(commentId);
+  if (seenFacebookCommentIds.size > 2000) {
+    const oldest = seenFacebookCommentIds.values().next().value;
+    if (oldest) seenFacebookCommentIds.delete(oldest);
+  }
+}
+
+async function pollFacebookComments() {
+  if (facebookPollBusy || !facebookConnection.connected || !facebookConnection.pages.length) return;
+  facebookPollBusy = true;
+
+  try {
+    const found = await findActiveFacebookLive();
+    if (!found) {
+      if (currentFacebookLiveId) {
+        broadcastJson({ type: "facebook_status", connected: true, live: false, status: "Facebook is connected, but no active Facebook Live video was found." });
+      }
+      currentFacebookLiveId = "";
+      facebookInitialCommentsLoaded = false;
+      seenFacebookCommentIds.clear();
+      return;
+    }
+
+    const liveVideoId = String(found.activeLiveVideo.id || "");
+    if (liveVideoId !== currentFacebookLiveId) {
+      currentFacebookLiveId = liveVideoId;
+      facebookInitialCommentsLoaded = false;
+      seenFacebookCommentIds.clear();
+      broadcastJson({
+        type: "facebook_status",
+        connected: true,
+        live: true,
+        status: `Listening to ${repairMojibake(found.page.name) || "Facebook Page"} Live comments`,
+        liveVideoId,
+      });
+    }
+
+    const commentsUrl = new URL(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${encodeURIComponent(liveVideoId)}/comments`);
+    commentsUrl.searchParams.set("fields", "id,from{name,id},message,created_time");
+    commentsUrl.searchParams.set("filter", "stream");
+    commentsUrl.searchParams.set("order", "chronological");
+    commentsUrl.searchParams.set("limit", "100");
+    commentsUrl.searchParams.set("access_token", found.pageAccessToken);
+    const commentsData = await readFacebookJson(commentsUrl.toString());
+    const comments = Array.isArray(commentsData.data) ? commentsData.data : [];
+
+    if (!facebookInitialCommentsLoaded) {
+      for (const comment of comments) {
+        const id = String(comment?.id || "");
+        if (id) rememberFacebookComment(id);
+      }
+      facebookInitialCommentsLoaded = true;
+      return;
+    }
+
+    for (const comment of comments) {
+      const id = String(comment?.id || "");
+      const text = repairMojibake(comment?.message);
+      if (!id || !text || seenFacebookCommentIds.has(id)) continue;
+      rememberFacebookComment(id);
+      broadcastJson({
+        type: "chat_message",
+        message: {
+          id: `facebook-${id}`,
+          platform: "Facebook",
+          username: safeUsername(comment?.from?.name, "Facebook viewer"),
+          text,
+          createdTime: String(comment?.created_time || ""),
+        },
+      });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not receive Facebook Live comments.";
+    console.error("Facebook comment polling error:", message);
+    broadcastJson({ type: "facebook_status", connected: true, live: Boolean(currentFacebookLiveId), status: `Facebook comment error: ${message}` });
+  } finally {
+    facebookPollBusy = false;
+  }
+}
+
+function startFacebookPolling() {
+  if (facebookPollTimer) return;
+  facebookPollTimer = setInterval(() => pollFacebookComments().catch((error) => console.error("Facebook poll error:", error)), FACEBOOK_POLL_INTERVAL_MS);
+  pollFacebookComments().catch((error) => console.error("Facebook initial poll error:", error));
+}
+
+function stopFacebookPolling() {
+  if (facebookPollTimer) clearInterval(facebookPollTimer);
+  facebookPollTimer = null;
+  facebookPollBusy = false;
+  currentFacebookLiveId = "";
+  facebookInitialCommentsLoaded = false;
+  seenFacebookCommentIds.clear();
 }
 
 app.get("/api/facebook/live-status", async (request, response) => {
@@ -206,17 +362,19 @@ app.get("/api/facebook/live-status", async (request, response) => {
   if (!facebookConnection.pages.length) {
     return response.status(404).json({ ok: false, connected: true, live: false, error: "No Facebook Pages were found." });
   }
+
   try {
     const found = await findActiveFacebookLive();
     if (!found) return response.json({ ok: true, connected: true, live: false, status: "Facebook is connected, but no active Facebook Live video was found." });
+
     return response.json({
       ok: true,
       connected: true,
       live: true,
-      page: { id: found.pageId, name: String(found.page.name || "Facebook Page") },
+      page: { id: found.pageId, name: repairMojibake(found.page.name) || "Facebook Page" },
       liveVideo: {
         id: String(found.activeLiveVideo.id || ""),
-        title: String(found.activeLiveVideo.title || found.activeLiveVideo.description || "Facebook Live"),
+        title: repairMojibake(found.activeLiveVideo.title || found.activeLiveVideo.description) || "Facebook Live",
         status: String(found.activeLiveVideo.status || "LIVE_NOW"),
         creationTime: String(found.activeLiveVideo.creation_time || ""),
       },
@@ -229,14 +387,13 @@ app.get("/api/facebook/live-status", async (request, response) => {
 });
 
 app.post("/api/facebook/disconnect", (request, response) => {
+  stopFacebookPolling();
   facebookConnection = { connected: false, userAccessToken: "", userId: "", userName: "", pages: [], connectedAt: "", error: "" };
   response.json({ ok: true, connected: false, status: "Facebook disconnected from DavaBridge." });
 });
 
 app.post("/api/facebook/send-message", async (request, response) => {
-  const message = String(request.body?.message || "")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-    .trim().slice(0, 500);
+  const message = repairMojibake(request.body?.message).slice(0, 500);
   if (!message) return response.status(400).json({ ok: false, sent: false, error: "Enter a Facebook message first." });
   if (!facebookConnection.connected) return response.status(401).json({ ok: false, sent: false, error: "Facebook is not connected." });
   if (!facebookConnection.pages.length) return response.status(404).json({ ok: false, sent: false, error: "No Facebook Pages were found." });
@@ -252,11 +409,12 @@ app.post("/api/facebook/send-message", async (request, response) => {
       headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
       body: commentBody.toString(),
     });
+
     return response.json({
       ok: true,
       sent: true,
-      status: `Message sent to ${String(found.page.name || "Facebook Page")}.`,
-      page: { id: found.pageId, name: String(found.page.name || "Facebook Page") },
+      status: `Message sent to ${repairMojibake(found.page.name) || "Facebook Page"}.`,
+      page: { id: found.pageId, name: repairMojibake(found.page.name) || "Facebook Page" },
       liveVideoId: String(found.activeLiveVideo.id),
       commentId: String(commentData.id || ""),
     });
@@ -266,22 +424,28 @@ app.post("/api/facebook/send-message", async (request, response) => {
     return response.status(500).json({ ok: false, sent: false, error: messageText });
   }
 });
+
 app.get(["/website", "/website.html"], (request, response, next) => {
-  response.sendFile(WEBSITE_FILE, (error) => {
-    if (error) next(error);
-  });
+  response.sendFile(WEBSITE_FILE, (error) => { if (error) next(error); });
 });
+
 app.use(express.static(DIST_FOLDER));
 
 const websocketServer = new WebSocketServer({ server, path: "/ws" });
+
 function sendJson(socket, data) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data));
 }
+
 function cleanTikTokUsername(value) {
-  return String(value || "").trim()
+  return cleanText(value)
     .replace(/^https?:\/\/(?:www\.)?tiktok\.com\/@/i, "")
-    .replace(/\/live\/?$/i, "").replace(/^@/, "").split(/[/?#]/)[0].trim();
+    .replace(/\/live\/?$/i, "")
+    .replace(/^@/, "")
+    .split(/[/?#]/)[0]
+    .trim();
 }
+
 async function disconnectTikTok(socket) {
   const connection = socket.tiktokConnection;
   socket.tiktokConnection = null;
@@ -295,6 +459,7 @@ async function connectTikTok(socket, usernameValue) {
   const username = cleanTikTokUsername(usernameValue);
   if (!username) return sendJson(socket, { type: "tiktok_status", connected: false, status: "Enter a TikTok username first." });
   if (!EULER_API_KEY) return sendJson(socket, { type: "tiktok_status", connected: false, status: "Euler Stream API key is not configured on the server." });
+
   await disconnectTikTok(socket);
   sendJson(socket, { type: "tiktok_status", connected: false, status: `Connecting to @${username}'s TikTok LIVE...` });
 
@@ -303,40 +468,71 @@ async function connectTikTok(socket, usernameValue) {
   socket.tiktokUsername = username;
 
   connection.on(WebcastEvent.CHAT, (data) => {
-    const text = String(data?.content || data?.comment || "").trim();
+    const text = repairMojibake(data?.content || data?.comment);
     if (!text) return;
-    const username = data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId || "TikTok viewer";
-    sendJson(socket, { type: "chat_message", message: { id: `tiktok-${data?.msgId || Date.now()}-${Math.random().toString(36).slice(2)}`, platform: "TikTok", username, text } });
+    const chatUsername = safeUsername(
+      data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId,
+      "TikTok viewer"
+    );
+    sendJson(socket, {
+      type: "chat_message",
+      message: {
+        id: `tiktok-${data?.msgId || Date.now()}-${Math.random().toString(36).slice(2)}`,
+        platform: "TikTok",
+        username: chatUsername,
+        text,
+      },
+    });
   });
-  connection.on(WebcastEvent.MEMBER, (data) => sendJson(socket, { type: "tiktok_join", username: data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId || "TikTok viewer" }));
-  connection.on(WebcastEvent.LIKE, (data) => sendJson(socket, { type: "tiktok_like", username: data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId || "TikTok viewer", count: Number(data?.count ?? 0), total: Number(data?.total ?? 0) }));
+
+  connection.on(WebcastEvent.MEMBER, (data) => sendJson(socket, {
+    type: "tiktok_join",
+    username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
+  }));
+
+  connection.on(WebcastEvent.LIKE, (data) => sendJson(socket, {
+    type: "tiktok_like",
+    username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
+    count: Number(data?.count ?? 0),
+    total: Number(data?.total ?? 0),
+  }));
+
   connection.on(WebcastEvent.ROOM_USER, (data) => {
-    const viewers = Number(data?.viewerCount ?? data?.total ?? data?.totalUser ?? data?.memberCount ?? data?.statistics?.viewerCount ?? data?.statistics?.memberCount ?? data?.roomInfo?.viewerCount ?? data?.roomInfo?.userCount ?? 0);
-    sendJson(socket, { type: "tiktok_viewers", viewers });
+    sendJson(socket, { type: "tiktok_viewers", viewers: Number(data?.total ?? 0) });
   });
+
   connection.on(WebcastEvent.GIFT, (data) => sendJson(socket, {
     type: "tiktok_gift",
-    username: data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId || "TikTok viewer",
-    giftName: data?.giftDetails?.giftName || data?.giftName || "TikTok gift",
+    username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
+    giftName: repairMojibake(data?.giftDetails?.giftName || data?.giftName) || "TikTok gift",
     count: Number(data?.repeatCount || data?.repeatEnd || 1),
   }));
+
   connection.on(WebcastEvent.DISCONNECTED, () => {
     if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: `Disconnected from @${username}'s TikTok LIVE.` });
   });
+
   connection.on(WebcastEvent.STREAM_END, () => {
     if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: `@${username}'s TikTok LIVE has ended.` });
   });
+
   connection.on(WebcastEvent.ERROR, (error) => {
-    if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: error instanceof Error ? `TikTok error: ${error.message}` : "TikTok connection error." });
+    if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: error instanceof Error ? `TikTok error: ${repairMojibake(error.message)}` : "TikTok connection error." });
   });
 
   try {
     const state = await connection.connect();
-    if (socket.tiktokConnection !== connection) { await connection.disconnect().catch(() => {}); return; }
+    if (socket.tiktokConnection !== connection) {
+      await connection.disconnect().catch(() => {});
+      return;
+    }
     sendJson(socket, { type: "tiktok_status", connected: true, username, roomId: state?.roomId || connection.roomId || "", status: `Listening to @${username}'s TikTok LIVE` });
   } catch (error) {
-    if (socket.tiktokConnection === connection) { socket.tiktokConnection = null; socket.tiktokUsername = ""; }
-    const details = error instanceof Error ? error.message : "Could not connect to TikTok.";
+    if (socket.tiktokConnection === connection) {
+      socket.tiktokConnection = null;
+      socket.tiktokUsername = "";
+    }
+    const details = error instanceof Error ? repairMojibake(error.message) : "Could not connect to TikTok.";
     console.error(`TikTok connection failed for @${username}:`, details);
     sendJson(socket, { type: "tiktok_status", connected: false, status: `Could not connect to @${username}. Make sure the account is currently LIVE.`, details });
     try { await connection.disconnect(); } catch {}
@@ -347,6 +543,17 @@ websocketServer.on("connection", (socket) => {
   socket.tiktokConnection = null;
   socket.tiktokUsername = "";
   sendJson(socket, { type: "server_status", connected: true, status: "Connected to the DavaBridge server." });
+
+  if (facebookConnection.connected) {
+    sendJson(socket, {
+      type: "facebook_status",
+      connected: true,
+      live: Boolean(currentFacebookLiveId),
+      status: currentFacebookLiveId ? "Listening for Facebook Live comments" : `Facebook connected as ${facebookConnection.userName || "Facebook user"}.`,
+    });
+    startFacebookPolling();
+  }
+
   socket.on("message", async (rawMessage) => {
     try {
       const command = JSON.parse(rawMessage.toString());
@@ -355,6 +562,10 @@ websocketServer.on("connection", (socket) => {
         await disconnectTikTok(socket);
         return sendJson(socket, { type: "tiktok_status", connected: false, status: "TikTok disconnected." });
       }
+      if (command.type === "refresh_facebook") {
+        await pollFacebookComments();
+        return sendJson(socket, { type: "facebook_status", connected: facebookConnection.connected, live: Boolean(currentFacebookLiveId), status: currentFacebookLiveId ? "Listening for Facebook Live comments" : "Facebook Live check completed." });
+      }
       if (command.type === "ping") return sendJson(socket, { type: "pong", timestamp: Date.now() });
       sendJson(socket, { type: "server_error", message: "Unknown DavaBridge command." });
     } catch (error) {
@@ -362,6 +573,7 @@ websocketServer.on("connection", (socket) => {
       sendJson(socket, { type: "server_error", message: "The DavaBridge server could not read that command." });
     }
   });
+
   socket.on("close", () => disconnectTikTok(socket).catch((error) => console.error("TikTok cleanup error:", error)));
   socket.on("error", (error) => console.error("DavaBridge WebSocket error:", error));
 });
@@ -374,10 +586,16 @@ app.use((request, response, next) => {
   if (request.path.startsWith("/api/") || request.path.startsWith("/auth/")) return next();
   response.sendFile(path.join(DIST_FOLDER, "index.html"), (error) => { if (error) next(error); });
 });
+
 app.use((request, response) => response.status(404).json({ ok: false, error: "DavaBridge route not found." }));
+
 app.use((error, request, response, next) => {
   console.error("DavaBridge server error:", error);
   if (response.headersSent) return next(error);
   response.status(500).json({ ok: false, error: "DavaBridge server error." });
 });
-server.listen(PORT, "0.0.0.0", () => console.log(`DavaBridge server is running on port ${PORT}`));
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`DavaBridge server is running on port ${PORT}`);
+  if (facebookConnection.connected) startFacebookPolling();
+});
