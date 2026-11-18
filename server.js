@@ -71,7 +71,7 @@ function repairMojibake(value) {
   if (/[ÃÂâð]/.test(text)) {
     try {
       const repaired = Buffer.from(text, "latin1").toString("utf8");
-      if (repaired && !repaired.includes("�")) text = repaired;
+      if (repaired && !repaired.includes(" ")) text = repaired;
     } catch {
       // Keep the original text if conversion is not safe.
     }
