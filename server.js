@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
 import crypto from "node:crypto";
@@ -21,7 +21,8 @@ const FACEBOOK_APP_SECRET = String(process.env.FACEBOOK_APP_SECRET || "").trim()
 const FACEBOOK_REDIRECT_URI = process.env.FACEBOOK_REDIRECT_URI ||
   "https://streaming-chat-app-production-dc88.up.railway.app/auth/facebook/callback";
 const FACEBOOK_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || "v25.0";
-const FACEBOOK_POLL_INTERVAL_MS = Math.max(2500, Number(process.env.FACEBOOK_POLL_INTERVAL_MS || 4000));
+const FACEBOOK_POLL_INTERVAL_MS = Math.max(15000, Number(process.env.FACEBOOK_POLL_INTERVAL_MS || 15000));
+const FACEBOOK_RATE_LIMIT_COOLDOWN_MS = Math.max(15 * 60 * 1000, Number(process.env.FACEBOOK_RATE_LIMIT_COOLDOWN_MS || 60 * 60 * 1000));
 
 const facebookLoginStates = new Map();
 const seenFacebookCommentIds = new Set();
@@ -29,6 +30,8 @@ let facebookPollTimer = null;
 let facebookPollBusy = false;
 let currentFacebookLiveId = "";
 let facebookInitialCommentsLoaded = false;
+let facebookRateLimitedUntil = 0;
+let facebookLastRateLimitNoticeAt = 0;
 
 let facebookConnection = {
   connected: false,
@@ -67,8 +70,8 @@ function repairMojibake(value) {
   let text = cleanText(value);
   if (!text) return "";
 
-  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ã, Â, â or ð.
-  if (/[ÃÂâð]/.test(text)) {
+  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ãƒ, Ã‚, Ã¢ or Ã°.
+  if (/[ÃƒÃ‚Ã¢Ã°]/.test(text)) {
     try {
       const repaired = Buffer.from(text, "latin1").toString("utf8");
       if (repaired && !repaired.includes(" ")) text = repaired;
@@ -107,12 +110,63 @@ function removeExpiredFacebookStates() {
   }
 }
 
+class FacebookApiError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = "FacebookApiError";
+    this.code = Number(details.code || 0);
+    this.subcode = Number(details.error_subcode || 0);
+    this.httpStatus = Number(details.httpStatus || 0);
+    this.isRateLimit = this.code === 4 || this.code === 17 || this.code === 32 || this.code === 613 || this.code === 80001;
+  }
+}
+
+function facebookCooldownRemainingMs() {
+  return Math.max(0, facebookRateLimitedUntil - Date.now());
+}
+
+function facebookCooldownMessage() {
+  const minutes = Math.max(1, Math.ceil(facebookCooldownRemainingMs() / 60000));
+  return `Facebook has temporarily rate-limited DavaBridge. Automatic Facebook requests are paused for about ${minutes} more minute${minutes === 1 ? "" : "s"}.`;
+}
+
+function activateFacebookRateLimitCooldown(error) {
+  facebookRateLimitedUntil = Math.max(facebookRateLimitedUntil, Date.now() + FACEBOOK_RATE_LIMIT_COOLDOWN_MS);
+  const now = Date.now();
+  if (now - facebookLastRateLimitNoticeAt > 60000) {
+    facebookLastRateLimitNoticeAt = now;
+    console.warn(`Facebook rate limit detected. Pausing Facebook Graph API requests until ${new Date(facebookRateLimitedUntil).toISOString()}.`, error.message);
+    broadcastJson({
+      type: "facebook_status",
+      connected: facebookConnection.connected,
+      live: Boolean(currentFacebookLiveId),
+      rateLimited: true,
+      retryAfter: new Date(facebookRateLimitedUntil).toISOString(),
+      status: facebookCooldownMessage(),
+    });
+  }
+}
+
 async function readFacebookJson(url, options = {}) {
+  if (facebookCooldownRemainingMs() > 0) {
+    const cooldownError = new FacebookApiError(facebookCooldownMessage(), { code: 4, httpStatus: 429 });
+    cooldownError.isLocalCooldown = true;
+    throw cooldownError;
+  }
+
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
+
   if (!response.ok || data?.error) {
-    throw new Error(data?.error?.message || data?.error_description || `Facebook returned HTTP ${response.status}.`);
+    const details = data?.error || {};
+    const error = new FacebookApiError(
+      details.message || data?.error_description || `Facebook returned HTTP ${response.status}.`,
+      { ...details, httpStatus: response.status }
+    );
+    if (error.isRateLimit || response.status === 429) activateFacebookRateLimitCooldown(error);
+    throw error;
   }
+
   return data;
 }
 
@@ -269,6 +323,7 @@ function rememberFacebookComment(commentId) {
 
 async function pollFacebookComments() {
   if (facebookPollBusy || !facebookConnection.connected || !facebookConnection.pages.length) return;
+  if (facebookCooldownRemainingMs() > 0) return;
   facebookPollBusy = true;
 
   try {
@@ -333,8 +388,17 @@ async function pollFacebookComments() {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not receive Facebook Live comments.";
-    console.error("Facebook comment polling error:", message);
-    broadcastJson({ type: "facebook_status", connected: true, live: Boolean(currentFacebookLiveId), status: `Facebook comment error: ${message}` });
+    if (!(error instanceof FacebookApiError && error.isLocalCooldown)) {
+      console.error("Facebook comment polling error:", message);
+    }
+    broadcastJson({
+      type: "facebook_status",
+      connected: true,
+      live: Boolean(currentFacebookLiveId),
+      rateLimited: error instanceof FacebookApiError ? error.isRateLimit : false,
+      retryAfter: facebookRateLimitedUntil ? new Date(facebookRateLimitedUntil).toISOString() : "",
+      status: error instanceof FacebookApiError && error.isRateLimit ? facebookCooldownMessage() : `Facebook comment error: ${message}`,
+    });
   } finally {
     facebookPollBusy = false;
   }
@@ -361,6 +425,16 @@ app.get("/api/facebook/live-status", async (request, response) => {
   }
   if (!facebookConnection.pages.length) {
     return response.status(404).json({ ok: false, connected: true, live: false, error: "No Facebook Pages were found." });
+  }
+  if (facebookCooldownRemainingMs() > 0) {
+    return response.status(429).json({
+      ok: false,
+      connected: true,
+      live: Boolean(currentFacebookLiveId),
+      rateLimited: true,
+      retryAfter: new Date(facebookRateLimitedUntil).toISOString(),
+      error: facebookCooldownMessage(),
+    });
   }
 
   try {
@@ -397,6 +471,15 @@ app.post("/api/facebook/send-message", async (request, response) => {
   if (!message) return response.status(400).json({ ok: false, sent: false, error: "Enter a Facebook message first." });
   if (!facebookConnection.connected) return response.status(401).json({ ok: false, sent: false, error: "Facebook is not connected." });
   if (!facebookConnection.pages.length) return response.status(404).json({ ok: false, sent: false, error: "No Facebook Pages were found." });
+  if (facebookCooldownRemainingMs() > 0) {
+    return response.status(429).json({
+      ok: false,
+      sent: false,
+      rateLimited: true,
+      retryAfter: new Date(facebookRateLimitedUntil).toISOString(),
+      error: facebookCooldownMessage(),
+    });
+  }
 
   try {
     const found = await findActiveFacebookLive();
@@ -599,3 +682,4 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
