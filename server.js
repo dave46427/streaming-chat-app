@@ -529,35 +529,76 @@ function cleanTikTokUsername(value) {
     .trim();
 }
 
-async function disconnectTikTok(socket) {
-  const connection = socket.tiktokConnection;
-  socket.tiktokConnection = null;
-  socket.tiktokUsername = "";
+let tiktokConnection = null;
+let tiktokUsername = "";
+let tiktokConnected = false;
+let tiktokRoomId = "";
+let tiktokConnectPromise = null;
+
+async function disconnectTikTok() {
+  const connection = tiktokConnection;
+  tiktokConnection = null;
+  tiktokUsername = "";
+  tiktokConnected = false;
+  tiktokRoomId = "";
+  tiktokConnectPromise = null;
   if (!connection) return;
-  try { await connection.disconnect(); }
-  catch (error) { console.warn("TikTok disconnect warning:", error instanceof Error ? error.message : error); }
+  try {
+    await connection.disconnect();
+  } catch (error) {
+    console.warn("TikTok disconnect warning:", error instanceof Error ? error.message : error);
+  }
 }
 
 async function connectTikTok(socket, usernameValue) {
   const username = cleanTikTokUsername(usernameValue);
-  if (!username) return sendJson(socket, { type: "tiktok_status", connected: false, status: "Enter a TikTok username first." });
-  if (!EULER_API_KEY) return sendJson(socket, { type: "tiktok_status", connected: false, status: "Euler Stream API key is not configured on the server." });
+  if (!username) {
+    return sendJson(socket, { type: "tiktok_status", connected: false, status: "Enter a TikTok username first." });
+  }
+  if (!EULER_API_KEY) {
+    return sendJson(socket, { type: "tiktok_status", connected: false, status: "Euler Stream API key is not configured on the server." });
+  }
 
-  await disconnectTikTok(socket);
+  if (tiktokConnection && tiktokUsername === username) {
+    if (tiktokConnectPromise) {
+      sendJson(socket, { type: "tiktok_status", connected: false, status: `Connecting to @${username}'s TikTok LIVE...` });
+      await tiktokConnectPromise.catch(() => {});
+    }
+
+    if (tiktokConnected && tiktokConnection) {
+      return sendJson(socket, {
+        type: "tiktok_status",
+        connected: true,
+        username: tiktokUsername,
+        roomId: tiktokRoomId,
+        status: `Listening to @${tiktokUsername}'s TikTok LIVE`,
+      });
+    }
+  }
+
+  if (tiktokConnection) await disconnectTikTok();
+
   sendJson(socket, { type: "tiktok_status", connected: false, status: `Connecting to @${username}'s TikTok LIVE...` });
 
-  const connection = new TikTokLiveConnection(username, { processInitialData: false, enableExtendedGiftInfo: false });
-  socket.tiktokConnection = connection;
-  socket.tiktokUsername = username;
+  const connection = new TikTokLiveConnection(username, {
+    processInitialData: false,
+    enableExtendedGiftInfo: false,
+  });
+
+  tiktokConnection = connection;
+  tiktokUsername = username;
+  tiktokConnected = false;
+  tiktokRoomId = "";
 
   connection.on(WebcastEvent.CHAT, (data) => {
+    if (tiktokConnection !== connection) return;
     const text = repairMojibake(data?.content || data?.comment);
     if (!text) return;
     const chatUsername = safeUsername(
       data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId,
       "TikTok viewer"
     );
-    sendJson(socket, {
+    broadcastJson({
       type: "chat_message",
       message: {
         id: `tiktok-${data?.msgId || Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -568,64 +609,115 @@ async function connectTikTok(socket, usernameValue) {
     });
   });
 
-  connection.on(WebcastEvent.MEMBER, (data) => sendJson(socket, {
-    type: "tiktok_join",
-    username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
-  }));
-
-  connection.on(WebcastEvent.LIKE, (data) => sendJson(socket, {
-    type: "tiktok_like",
-    username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
-    count: Number(data?.count ?? 0),
-    total: Number(data?.total ?? 0),
-  }));
-
-  connection.on(WebcastEvent.ROOM_USER, (data) => {
-    sendJson(socket, { type: "tiktok_viewers", viewers: Number(data?.total ?? 0) });
+  connection.on(WebcastEvent.MEMBER, (data) => {
+    if (tiktokConnection !== connection) return;
+    broadcastJson({
+      type: "tiktok_join",
+      username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
+    });
   });
 
-  connection.on(WebcastEvent.GIFT, (data) => sendJson(socket, {
-    type: "tiktok_gift",
-    username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
-    giftName: repairMojibake(data?.giftDetails?.giftName || data?.giftName) || "TikTok gift",
-    count: Number(data?.repeatCount || data?.repeatEnd || 1),
-  }));
+  connection.on(WebcastEvent.LIKE, (data) => {
+    if (tiktokConnection !== connection) return;
+    broadcastJson({
+      type: "tiktok_like",
+      username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
+      count: Number(data?.count ?? 0),
+      total: Number(data?.total ?? 0),
+    });
+  });
+
+  connection.on(WebcastEvent.ROOM_USER, (data) => {
+    if (tiktokConnection !== connection) return;
+    broadcastJson({ type: "tiktok_viewers", viewers: Number(data?.total ?? 0) });
+  });
+
+  connection.on(WebcastEvent.GIFT, (data) => {
+    if (tiktokConnection !== connection) return;
+    broadcastJson({
+      type: "tiktok_gift",
+      username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
+      giftName: repairMojibake(data?.giftDetails?.giftName || data?.giftName) || "TikTok gift",
+      count: Number(data?.repeatCount || data?.repeatEnd || 1),
+    });
+  });
 
   connection.on(WebcastEvent.DISCONNECTED, () => {
-    if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: `Disconnected from @${username}'s TikTok LIVE.` });
+    if (tiktokConnection !== connection) return;
+    tiktokConnected = false;
+    tiktokRoomId = "";
+    broadcastJson({ type: "tiktok_status", connected: false, status: `Disconnected from @${username}'s TikTok LIVE.` });
   });
 
   connection.on(WebcastEvent.STREAM_END, () => {
-    if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: `@${username}'s TikTok LIVE has ended.` });
+    if (tiktokConnection !== connection) return;
+    tiktokConnected = false;
+    tiktokRoomId = "";
+    broadcastJson({ type: "tiktok_status", connected: false, status: `@${username}'s TikTok LIVE has ended.` });
   });
 
   connection.on(WebcastEvent.ERROR, (error) => {
-    if (socket.tiktokConnection === connection) sendJson(socket, { type: "tiktok_status", connected: false, status: error instanceof Error ? `TikTok error: ${repairMojibake(error.message)}` : "TikTok connection error." });
+    if (tiktokConnection !== connection) return;
+    broadcastJson({
+      type: "tiktok_status",
+      connected: false,
+      status: error instanceof Error ? `TikTok error: ${repairMojibake(error.message)}` : "TikTok connection error.",
+    });
   });
 
+  tiktokConnectPromise = connection.connect();
+
   try {
-    const state = await connection.connect();
-    if (socket.tiktokConnection !== connection) {
+    const state = await tiktokConnectPromise;
+    if (tiktokConnection !== connection) {
       await connection.disconnect().catch(() => {});
       return;
     }
-    sendJson(socket, { type: "tiktok_status", connected: true, username, roomId: state?.roomId || connection.roomId || "", status: `Listening to @${username}'s TikTok LIVE` });
+
+    tiktokConnected = true;
+    tiktokRoomId = String(state?.roomId || connection.roomId || "");
+    broadcastJson({
+      type: "tiktok_status",
+      connected: true,
+      username,
+      roomId: tiktokRoomId,
+      status: `Listening to @${username}'s TikTok LIVE`,
+    });
   } catch (error) {
-    if (socket.tiktokConnection === connection) {
-      socket.tiktokConnection = null;
-      socket.tiktokUsername = "";
+    if (tiktokConnection === connection) {
+      tiktokConnection = null;
+      tiktokUsername = "";
+      tiktokConnected = false;
+      tiktokRoomId = "";
     }
     const details = error instanceof Error ? repairMojibake(error.message) : "Could not connect to TikTok.";
     console.error(`TikTok connection failed for @${username}:`, details);
-    sendJson(socket, { type: "tiktok_status", connected: false, status: `Could not connect to @${username}. Make sure the account is currently LIVE.`, details });
-    try { await connection.disconnect(); } catch {}
+    sendJson(socket, {
+      type: "tiktok_status",
+      connected: false,
+      status: `Could not connect to @${username}. Make sure the account is currently LIVE.`,
+      details,
+    });
+    try {
+      await connection.disconnect();
+    } catch {}
+  } finally {
+    if (tiktokConnectPromise) tiktokConnectPromise = null;
   }
 }
 
 websocketServer.on("connection", (socket) => {
-  socket.tiktokConnection = null;
-  socket.tiktokUsername = "";
   sendJson(socket, { type: "server_status", connected: true, status: "Connected to the DavaBridge server." });
+
+  if (tiktokConnection && tiktokConnected) {
+    sendJson(socket, {
+      type: "tiktok_status",
+      connected: true,
+      username: tiktokUsername,
+      roomId: tiktokRoomId,
+      status: `Listening to @${tiktokUsername}'s TikTok LIVE`,
+    });
+  }
 
   if (facebookConnection.connected) {
     sendJson(socket, {
@@ -642,8 +734,9 @@ websocketServer.on("connection", (socket) => {
       const command = JSON.parse(rawMessage.toString());
       if (command.type === "connect_tiktok") return await connectTikTok(socket, command.username);
       if (command.type === "disconnect_tiktok") {
-        await disconnectTikTok(socket);
-        return sendJson(socket, { type: "tiktok_status", connected: false, status: "TikTok disconnected." });
+        await disconnectTikTok();
+        broadcastJson({ type: "tiktok_status", connected: false, status: "TikTok disconnected." });
+        return;
       }
       if (command.type === "refresh_facebook") {
         await pollFacebookComments();
@@ -657,7 +750,9 @@ websocketServer.on("connection", (socket) => {
     }
   });
 
-  socket.on("close", () => disconnectTikTok(socket).catch((error) => console.error("TikTok cleanup error:", error)));
+  socket.on("close", () => {
+    console.log("DavaBridge browser disconnected; keeping the TikTok LIVE connection running.");
+  });
   socket.on("error", (error) => console.error("DavaBridge WebSocket error:", error));
 });
 
