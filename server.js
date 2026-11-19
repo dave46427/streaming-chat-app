@@ -636,6 +636,20 @@ async function connectTikTok(socket, usernameValue) {
       total: Number(data?.total ?? 0),
     });
   });
+  connection.on(WebcastEvent.FOLLOW, (data) => {
+    if (tiktokConnection !== connection) return;
+    broadcastJson({
+      type: "tiktok_follow",
+      username: safeUsername(
+        data?.user?.displayId ||
+        data?.user?.uniqueId ||
+        data?.user?.nickname ||
+        data?.user?.userId,
+        "TikTok viewer"
+      ),
+    });
+  });
+
 
   connection.on(WebcastEvent.ROOM_USER, (data) => {
     if (tiktokConnection !== connection) return;
