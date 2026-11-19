@@ -284,6 +284,11 @@ app.get("/api/facebook/status", (request, response) => {
   response.json({ ok: true, ...publicFacebookConnection() });
 });
 
+function isActiveFacebookLiveStatus(value) {
+  const status = String(value || "").trim().toUpperCase();
+  return status === "LIVE" || status === "LIVE_NOW";
+}
+
 async function findActiveFacebookLive() {
   for (const page of Array.isArray(facebookConnection.pages) ? facebookConnection.pages : []) {
     const pageId = String(page.id || "");
@@ -295,11 +300,16 @@ async function findActiveFacebookLive() {
     liveVideosUrl.searchParams.set("limit", "25");
     liveVideosUrl.searchParams.set("access_token", pageAccessToken);
     const data = await readFacebookJson(liveVideosUrl.toString());
+    const liveVideos = Array.isArray(data.data) ? data.data : [];
 
-    const activeLiveVideo = (Array.isArray(data.data) ? data.data : []).find(
-      (video) => String(video.status || "").toUpperCase() === "LIVE_NOW"
+    console.log(
+      `Facebook Live check for ${repairMojibake(page.name) || pageId}:`,
+      liveVideos.length
+        ? liveVideos.map((video) => `${String(video.id || "unknown")}:${String(video.status || "unknown")}`).join(", ")
+        : "no LiveVideo objects returned"
     );
 
+    const activeLiveVideo = liveVideos.find((video) => isActiveFacebookLiveStatus(video.status));
     if (activeLiveVideo) return { page, pageId, pageAccessToken, activeLiveVideo };
   }
 
