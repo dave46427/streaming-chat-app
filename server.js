@@ -373,6 +373,7 @@ async function findActiveFacebookLive() {
     const liveVideosUrl = new URL(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${pageId}/live_videos`);
     liveVideosUrl.searchParams.set("fields", "id,title,description,status,creation_time");
     liveVideosUrl.searchParams.set("limit", "25");
+    liveVideosUrl.searchParams.set("source", "owner");
     liveVideosUrl.searchParams.set("access_token", pageAccessToken);
     const data = await readFacebookJson(liveVideosUrl.toString());
     const liveVideos = Array.isArray(data.data) ? data.data : [];
@@ -879,6 +880,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
 
 
