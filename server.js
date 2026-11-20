@@ -446,12 +446,8 @@ async function pollFacebookComments() {
     const comments = Array.isArray(commentsData.data) ? commentsData.data : [];
 
     if (!facebookInitialCommentsLoaded) {
-      for (const comment of comments) {
-        const id = String(comment?.id || "");
-        if (id) rememberFacebookComment(id);
-      }
       facebookInitialCommentsLoaded = true;
-      return;
+      console.log(`Facebook initial comment fetch returned ${comments.length} comment(s).`);
     }
 
     for (const comment of comments) {
