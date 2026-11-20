@@ -74,7 +74,7 @@ function repairMojibake(value) {
   if (/[ÃƒÃ‚Ã¢Ã°]/.test(text)) {
     try {
       const repaired = Buffer.from(text, "latin1").toString("utf8");
-      if (repaired && !repaired.includes(" ")) text = repaired;
+      if (repaired && !repaired.includes("�")) text = repaired;
     } catch {
       // Keep the original text if conversion is not safe.
     }
@@ -761,6 +761,13 @@ websocketServer.on("connection", (socket) => {
         await disconnectTikTok();
         broadcastJson({ type: "tiktok_status", connected: false, status: "TikTok disconnected." });
         return;
+      }
+      if (command.type === "send_tiktok_message") {
+        return sendJson(socket, {
+          type: "tiktok_send_status",
+          sent: false,
+          status: "Incoming TikTok chat is working. Sending replies requires Premium.",
+        });
       }
       if (command.type === "refresh_facebook") {
         await pollFacebookComments();

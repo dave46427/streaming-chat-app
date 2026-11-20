@@ -999,7 +999,8 @@ if (facebookConfigured) {
   return;
 }
 
-    setShowLiveChat(true);
+    // Stay on Home while platform reconnections settle.
+    // Use the live indicators below to see when each platform is ready.
   };
   const openConnections = () => {
     localStorage.removeItem("streambridge_setup_complete");
