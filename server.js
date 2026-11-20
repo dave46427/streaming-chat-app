@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import express from "express";
 import { createServer } from "node:http";
 import crypto from "node:crypto";
@@ -70,11 +70,11 @@ function repairMojibake(value) {
   let text = cleanText(value);
   if (!text) return "";
 
-  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ãƒ, Ã‚, Ã¢ or Ã°.
-  if (/[ÃƒÃ‚Ã¢Ã°]/.test(text)) {
+  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ã, Â, â or ð.
+  if (/[ÃÂâð]/.test(text)) {
     try {
       const repaired = Buffer.from(text, "latin1").toString("utf8");
-      if (repaired && !repaired.includes("�")) text = repaired;
+      if (repaired && !repaired.includes("?")) text = repaired;
     } catch {
       // Keep the original text if conversion is not safe.
     }
@@ -203,6 +203,7 @@ app.get("/auth/facebook", (request, response) => {
     "pages_manage_metadata",
     "pages_manage_engagement",
     "pages_manage_posts",
+    "publish_video",
   ].join(","));
 
   return response.redirect(loginUrl.toString());
@@ -878,5 +879,8 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
+
+
 
 
