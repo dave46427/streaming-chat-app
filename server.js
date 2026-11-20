@@ -280,8 +280,82 @@ app.get("/auth/facebook/callback", async (request, response) => {
   }
 });
 
-app.get("/api/facebook/status", (request, response) => {
-  response.json({ ok: true, ...publicFacebookConnection() });
+app.get("/api/facebook/status", async (request, response) => {
+  if (!facebookConnection.connected || !facebookConnection.userAccessToken) {
+    return response.json({
+      ok: true,
+      connected: false,
+      userId: "",
+      userName: "",
+      connectedAt: "",
+      error: "",
+      pages: [],
+    });
+  }
+
+  try {
+    const profileUrl = new URL(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me`);
+    profileUrl.searchParams.set("fields", "id,name");
+    profileUrl.searchParams.set("access_token", facebookConnection.userAccessToken);
+    const profileData = await readFacebookJson(profileUrl.toString());
+
+    const pagesUrl = new URL(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me/accounts`);
+    pagesUrl.searchParams.set("fields", "id,name,category,tasks,access_token");
+    pagesUrl.searchParams.set("access_token", facebookConnection.userAccessToken);
+    const pagesData = await readFacebookJson(pagesUrl.toString());
+
+    const pages = Array.isArray(pagesData.data) ? pagesData.data : [];
+
+    if (!profileData.id || pages.length === 0) {
+      throw new Error("The saved Facebook connection is no longer valid.");
+    }
+
+    facebookConnection = {
+      ...facebookConnection,
+      connected: true,
+      userId: String(profileData.id),
+      userName: repairMojibake(profileData.name),
+      pages,
+      error: "",
+    };
+
+    return response.json({
+      ok: true,
+      ...publicFacebookConnection(),
+    });
+  } catch (error) {
+    if (error instanceof FacebookApiError && error.isRateLimit) {
+      return response.status(429).json({
+        ok: false,
+        connected: facebookConnection.connected,
+        rateLimited: true,
+        error: facebookCooldownMessage(),
+        ...publicFacebookConnection(),
+      });
+    }
+
+    const message = error instanceof Error
+      ? error.message
+      : "The saved Facebook connection could not be validated.";
+
+    console.warn("Facebook saved connection is invalid:", message);
+    stopFacebookPolling();
+
+    facebookConnection = {
+      connected: false,
+      userAccessToken: "",
+      userId: "",
+      userName: "",
+      pages: [],
+      connectedAt: "",
+      error: "Facebook needs reconnecting.",
+    };
+
+    return response.json({
+      ok: true,
+      ...publicFacebookConnection(),
+    });
+  }
 });
 
 function isActiveFacebookLiveStatus(value) {
@@ -808,4 +882,5 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
