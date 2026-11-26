@@ -261,7 +261,12 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
         .sb-brand-title {
           margin: 0;
-          color: #73b9db;
+          color: transparent;
+            display: inline-block;
+            background: linear-gradient(90deg, #ff0000 0%, #53fc18 25%, #1877f2 45%, #9146ff 65%, #ff5500 85%, #ff0000 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
 
           font-size:
             clamp(42px, 7vw, 100px);
@@ -394,7 +399,12 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           background:
             rgba(2, 9, 24, 0.84);
 
-          color: #73b9db;
+          color: transparent;
+            display: inline-block;
+            background: linear-gradient(90deg, #ff0000 0%, #53fc18 25%, #1877f2 45%, #9146ff 65%, #ff5500 85%, #ff0000 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
           font-size: 18px;
 
           box-shadow:
@@ -426,7 +436,12 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
         }
 
         .sb-skip:hover {
-          color: #73b9db;
+          color: transparent;
+            display: inline-block;
+            background: linear-gradient(90deg, #ff0000 0%, #53fc18 25%, #1877f2 45%, #9146ff 65%, #ff5500 85%, #ff0000 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
 
           border-color:
             rgba(103, 232, 249, 0.75);
@@ -552,6 +567,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
     </main>
   );
 }
+
 
 
 
