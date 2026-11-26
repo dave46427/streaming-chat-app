@@ -292,10 +292,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
             drop-shadow(0 0 18px rgba(37, 99, 235, 0.28));
         }
 
-        @keyframes sbPlatformSweep {
-          0% {
-            background-position: 0% 50%;
-          }
+        @keyframes sbPlatformSweep { 0% { background-position: 100% 50%; } 5% { background-position: 100% 50%; } 90% { background-position: 0% 50%; } 100% { background-position: 0% 50%; } }
 
           15% {
             background-position: 0% 50%;
@@ -562,4 +559,5 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
     </main>
   );
 }
+
 
