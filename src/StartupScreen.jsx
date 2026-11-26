@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 
 export default function StartupScreen({ onContinue, onSkipSetup }) {
   const [ready, setReady] = useState(false);
@@ -276,7 +276,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
           animation:
             sbPlatformSweep
-            5.5s
+            9s
             ease-in-out
             4.5s
             infinite;
@@ -302,11 +302,11 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           }
 
           70% {
-            background-position: 100% 50%;
+            background-position: 0% 50%;
           }
 
           100% {
-            background-position: 100% 50%;
+            background-position: 0% 50%;
           }
         }
 
