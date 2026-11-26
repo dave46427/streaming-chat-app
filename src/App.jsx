@@ -47,6 +47,25 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
+
+  const liveChatFallbacks = {
+    skipToChat: "Skip to chat messages",
+    backToSettings: "Back to Settings",
+    liveChat: "LIVE CHAT",
+    addChatBackground: "Add chat background",
+    combinedChatTitle: "Combined Chat",
+    waitingForMessages: "Waiting for live messages...",
+    sendToKick: "SEND TO KICK",
+    sendToMixcloud: "SEND TO MIXCLOUD"
+  };
+
+  const lt = (key) => {
+    const translated = typeof t === "function" ? t(key) : "";
+
+    return translated && translated !== key
+      ? translated
+      : liveChatFallbacks[key] || key;
+  };
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   useEffect(() => {
     const latest = messages[messages.length - 1];
@@ -63,15 +82,15 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
   }, []);
   return (
     <main style={{ minHeight: "100vh", background: highContrast ? "#000" : (theme === "light" ? "#eef2ff" : "#0b1020"), color: highContrast ? "#fff" : (theme === "light" ? "#111827" : "white"), padding: "clamp(8px, 1.5vw, 14px)", fontSize: largeText ? "125%" : "100%", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
-      <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>{t("skipToChat")}</a>
+      <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>{lt("skipToChat")}</a>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <button type="button" onClick={onBack} style={liveButtonStyle}>{t("backToSettings")}</button>
+        <button type="button" onClick={onBack} style={liveButtonStyle}>{lt("backToSettings")}</button>
         <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>DAVABRIDGE LIVE</div>
-        <div style={{ color: "#70f0a0", fontWeight: 700 }}>{t("liveChat")}</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>{t("addChatBackground")}<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
+        <div style={{ color: "#70f0a0", fontWeight: 700 }}>{lt("liveChat")}</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>{lt("addChatBackground")}<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
       </header>
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
-          <div style={{ fontSize: "1rem", fontWeight: 800 }}>{t("combinedChatTitle")}</div>
+          <div style={{ fontSize: "1rem", fontWeight: 800 }}>{lt("combinedChatTitle")}</div>
 <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} Twitch: {twitchStatus}</div>
 <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} YouTube: {youtubeStatus}</div>
 <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} TikTok: {tiktokStatus}</div>
@@ -81,7 +100,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
 </div>
         </div>
         <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
-          {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>{t("waitingForMessages")}</div> : messages.map((msg, index) => (
+          {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>{lt("waitingForMessages")}</div> : messages.map((msg, index) => (
             <div key={msg.id ?? index} style={{ padding: "8px 11px", marginBottom: 7, background: chatBackground ? `${messageBackgroundColor}D9` : messageBackgroundColor, color: messageTextColor, borderRadius: 10, backdropFilter: chatBackground ? "blur(2px)" : "none", borderLeft: `4px solid ${msg.platform === "YouTube" ? youtubeMessageColor : msg.platform === "TikTok" ? tiktokMessageColor : twitchMessageColor}` }}>
               <div style={{ fontSize: ".76rem", color: "#aeb8d4", marginBottom: 4 }}>{msg.platform ?? "Chat"} {"\u2022"} <strong style={{ color: messageTextColor }}>{msg.username ?? "Viewer"}</strong></div>
               <div style={{ fontSize: ".98rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
@@ -97,7 +116,6 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
             <option value="facebook">Facebook</option>
             <option value="kick">Kick</option>
             <option value="mixcloud">Mixcloud</option>
-            <option value="both">Twitch + YouTube</option>
             <option value="all">All Sendable Platforms</option>
           </select>
           <label htmlFor="live-chat-message" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Live chat message</label><input ref={messageInputRef} id="live-chat-message" aria-label="Live chat message. Press Alt plus L to focus this box" maxLength={500} value={messageText} onChange={(event) => setMessageText(expandEmojiWords(cleanChatText(event.target.value)))} placeholder="Start typing... (try: fire)" style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#070a13", borderLeftColor: "#070a13", borderRightColor: "#526181", borderBottomColor: "#526181", background: "linear-gradient(180deg, #0b1122 0%, #182440 100%)", color: "white", fontSize: "1rem", boxShadow: "inset 0 5px 10px rgba(0,0,0,.78), inset 0 -1px 0 rgba(255,255,255,.1), 0 2px 0 rgba(255,255,255,.1)", outline: "none" }} />
@@ -119,9 +137,9 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
                   : sendTarget === "facebook"
                     ? "SEND TO FACEBOOK"
                     : sendTarget === "kick"
-                      ? t("sendToKick")
+                      ? lt("sendToKick")
                       : sendTarget === "mixcloud"
-                        ? t("sendToMixcloud")
+                        ? lt("sendToMixcloud")
                         : "SEND"}
           </button>
         </form>
@@ -914,7 +932,6 @@ if (data.type === "tiktok_like") {
       if (sendTarget === "tiktok") await sendTikTokMessage(text);
       if (sendTarget === "facebook") await sendFacebookMessage(text);
       if (sendTarget === "kick") await sendKickMessage(text);
-      if (sendTarget === "both") await Promise.all([sendTwitchMessage(text), sendYouTubeMessage(text)]);
       if (sendTarget === "all") {
         const sends = [];
         if (twitchConnected && activeChannel) sends.push(sendTwitchMessage(text));
@@ -942,7 +959,6 @@ if (data.type === "tiktok_like") {
     (sendTarget === "tiktok" && tiktokConnected) ||
     (sendTarget === "facebook" && facebookConnected) ||
     (sendTarget === "kick" && kickConnected) ||
-    (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId) ||
     (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId) || facebookConnected || kickConnected))
   );
   if (safetyPage) {
