@@ -332,7 +332,13 @@ if (data.type === "tiktok_like") {
     return () => { stopped = true; clearTimeout(tiktokReconnectTimerRef.current); if (tiktokSocketRef.current) { tiktokSocketRef.current.onclose = null; tiktokSocketRef.current.close(); } };
   }, []);
 
-    const connectFacebook = () => {
+    const connectMixcloud = () => {
+    sessionStorage.setItem("streambridge_setup_in_progress", "true");
+    sessionStorage.removeItem("streambridge_setup_complete");
+    window.location.href = "/auth/mixcloud";
+  };
+
+  const connectFacebook = () => {
     setFacebookStatus("Opening Facebook login...");
     sessionStorage.setItem("streambridge_setup_in_progress", "true");
     sessionStorage.removeItem("streambridge_setup_complete");
@@ -893,12 +899,21 @@ if (data.type === "tiktok_like") {
   {facebookConnected ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectFacebook} style={connectionButton}>CONNECT</button>}
 </article>
 
-{["Kick", "Mixcloud"].map((name) => (
-  <article style={platformCard} key={name}>
-    <div><strong style={{ fontSize: "1.08rem" }}>{name}</strong><div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div></div>
-    <div style={badge(false)}>COMING SOON</div>
-  </article>
-))}
+<article style={platformCard}>
+  <div>
+    <strong style={{ fontSize: "1.08rem" }}>Kick</strong>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div>
+  </div>
+  <div style={badge(false)}>COMING SOON</div>
+</article>
+
+<article style={platformCard}>
+  <div>
+    <strong style={{ fontSize: "1.08rem" }}>Mixcloud</strong>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Connect your Mixcloud account</div>
+  </div>
+  <button type="button" onClick={connectMixcloud} style={connectionButton}>CONNECT</button>
+</article>
           </div>
 
           <div style={{ display: "grid", gap: 11, marginTop: 24 }}>
@@ -1153,6 +1168,7 @@ if (facebookConfigured) {
     </main>
   );
 }
+
 
 
 
