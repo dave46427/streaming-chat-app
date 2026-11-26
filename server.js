@@ -16,6 +16,10 @@ const DIST_FOLDER = path.join(__dirname, "dist");
 const WEBSITE_FILE = path.join(__dirname, "public", "website.html");
 
 const EULER_API_KEY = process.env.EULER_API_KEY || process.env.TIKTOK_SIGN_API_KEY || "";
+const MIXCLOUD_CLIENT_ID = String(process.env.MIXCLOUD_CLIENT_ID || "").trim();
+const MIXCLOUD_CLIENT_SECRET = String(process.env.MIXCLOUD_CLIENT_SECRET || "").trim();
+const MIXCLOUD_REDIRECT_URI = process.env.MIXCLOUD_REDIRECT_URI ||
+  "https://streaming-chat-app-production-dc88.up.railway.app/auth/mixcloud/callback";
 const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
 const FACEBOOK_APP_SECRET = String(process.env.FACEBOOK_APP_SECRET || "").trim();
 const FACEBOOK_REDIRECT_URI = process.env.FACEBOOK_REDIRECT_URI ||
@@ -23,6 +27,18 @@ const FACEBOOK_REDIRECT_URI = process.env.FACEBOOK_REDIRECT_URI ||
 const FACEBOOK_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || "v25.0";
 const FACEBOOK_POLL_INTERVAL_MS = Math.max(15000, Number(process.env.FACEBOOK_POLL_INTERVAL_MS || 15000));
 const FACEBOOK_RATE_LIMIT_COOLDOWN_MS = Math.max(15 * 60 * 1000, Number(process.env.FACEBOOK_RATE_LIMIT_COOLDOWN_MS || 60 * 60 * 1000));
+
+
+const mixcloudLoginStates = new Map();
+let mixcloudConnection = {
+  connected: false,
+  accessToken: "",
+  userKey: "",
+  userName: "",
+  displayName: "",
+  connectedAt: "",
+  error: "",
+};
 
 const facebookLoginStates = new Map();
 const seenFacebookCommentIds = new Set();
@@ -48,6 +64,13 @@ if (EULER_API_KEY) {
   console.log("Euler Stream API key loaded.");
 } else {
   console.warn("Euler Stream API key was not found. Add EULER_API_KEY to .env or Railway Variables.");
+}
+
+
+if (MIXCLOUD_CLIENT_ID && MIXCLOUD_CLIENT_SECRET) {
+  console.log("Mixcloud Client ID and Client Secret loaded.");
+} else {
+  console.warn("Mixcloud credentials were not found. Add MIXCLOUD_CLIENT_ID and MIXCLOUD_CLIENT_SECRET.");
 }
 
 if (FACEBOOK_APP_ID && FACEBOOK_APP_SECRET) {
@@ -175,6 +198,8 @@ app.get("/api/health", (request, response) => {
     ok: true,
     service: "DavaBridge",
     eulerApiKeyLoaded: Boolean(EULER_API_KEY),
+    mixcloudCredentialsLoaded: Boolean(MIXCLOUD_CLIENT_ID && MIXCLOUD_CLIENT_SECRET),
+    mixcloudConnected: mixcloudConnection.connected,
     facebookCredentialsLoaded: Boolean(FACEBOOK_APP_ID && FACEBOOK_APP_SECRET),
     facebookConnected: facebookConnection.connected,
     facebookPolling: Boolean(facebookPollTimer),
@@ -588,6 +613,170 @@ app.post("/api/facebook/send-message", async (request, response) => {
     console.error("Facebook Live send error:", messageText);
     return response.status(500).json({ ok: false, sent: false, error: messageText });
   }
+});
+
+
+function publicMixcloudConnection() {
+  return {
+    connected: mixcloudConnection.connected,
+    userKey: mixcloudConnection.userKey,
+    userName: mixcloudConnection.userName,
+    displayName: mixcloudConnection.displayName,
+    connectedAt: mixcloudConnection.connectedAt,
+    error: mixcloudConnection.error,
+  };
+}
+
+function removeExpiredMixcloudStates() {
+  const now = Date.now();
+  for (const [state, login] of mixcloudLoginStates.entries()) {
+    if (now - login.createdAt > 10 * 60 * 1000) mixcloudLoginStates.delete(state);
+  }
+}
+
+function base64UrlSha256(value) {
+  return crypto.createHash("sha256").update(value).digest("base64url");
+}
+
+async function readMixcloudJson(url, options = {}) {
+  const apiResponse = await fetch(url, options);
+  const data = await apiResponse.json().catch(() => ({}));
+  if (!apiResponse.ok || data?.error) {
+    const message = data?.error_description || data?.error?.message || data?.error || `Mixcloud returned HTTP ${apiResponse.status}.`;
+    throw new Error(String(message));
+  }
+  return data;
+}
+
+app.get("/auth/mixcloud", (request, response) => {
+  if (!MIXCLOUD_CLIENT_ID || !MIXCLOUD_CLIENT_SECRET) {
+    return response.status(503).json({ ok: false, error: "Mixcloud is not configured. Add MIXCLOUD_CLIENT_ID and MIXCLOUD_CLIENT_SECRET." });
+  }
+
+  removeExpiredMixcloudStates();
+  const state = crypto.randomBytes(32).toString("base64url");
+  const codeVerifier = crypto.randomBytes(64).toString("base64url");
+  mixcloudLoginStates.set(state, { createdAt: Date.now(), codeVerifier });
+
+  const loginUrl = new URL("https://www.mixcloud.com/oauth/authorize/");
+  loginUrl.searchParams.set("response_type", "code");
+  loginUrl.searchParams.set("client_id", MIXCLOUD_CLIENT_ID);
+  loginUrl.searchParams.set("redirect_uri", MIXCLOUD_REDIRECT_URI);
+  loginUrl.searchParams.set("state", state);
+  loginUrl.searchParams.set("code_challenge", base64UrlSha256(codeVerifier));
+  loginUrl.searchParams.set("code_challenge_method", "S256");
+  return response.redirect(loginUrl.toString());
+});
+
+app.get("/auth/mixcloud/callback", async (request, response) => {
+  const code = String(request.query.code || "");
+  const state = String(request.query.state || "");
+  const oauthError = String(request.query.error || "");
+  const oauthErrorDescription = String(request.query.error_description || "");
+
+  removeExpiredMixcloudStates();
+  const login = mixcloudLoginStates.get(state);
+
+  if (oauthError) {
+    mixcloudConnection.error = oauthErrorDescription || "Mixcloud login was cancelled.";
+    return response.redirect(`/?mixcloud=error&message=${encodeURIComponent(mixcloudConnection.error)}`);
+  }
+  if (!state || !login) {
+    mixcloudConnection.error = "Mixcloud login could not be verified. Please try connecting again.";
+    return response.redirect(`/?mixcloud=error&message=${encodeURIComponent(mixcloudConnection.error)}`);
+  }
+
+  mixcloudLoginStates.delete(state);
+  if (!code) {
+    mixcloudConnection.error = "Mixcloud did not return an authorization code.";
+    return response.redirect(`/?mixcloud=error&message=${encodeURIComponent(mixcloudConnection.error)}`);
+  }
+
+  try {
+    const basicCredentials = Buffer.from(`${MIXCLOUD_CLIENT_ID}:${MIXCLOUD_CLIENT_SECRET}`).toString("base64");
+    const tokenBody = new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: MIXCLOUD_REDIRECT_URI,
+      code_verifier: login.codeVerifier,
+    });
+    const tokenData = await readMixcloudJson("https://www.mixcloud.com/oauth/access_token/", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basicCredentials}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: tokenBody.toString(),
+    });
+    const accessToken = String(tokenData.access_token || "");
+    if (!accessToken) throw new Error("Mixcloud did not return an access token.");
+
+    const profileData = await readMixcloudJson("https://api.mixcloud.com/me/", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    mixcloudConnection = {
+      connected: true,
+      accessToken,
+      userKey: String(profileData.key || ""),
+      userName: repairMojibake(profileData.username || ""),
+      displayName: repairMojibake(profileData.name || profileData.username || "Mixcloud user"),
+      connectedAt: new Date().toISOString(),
+      error: "",
+    };
+    console.log(`Mixcloud connected for ${mixcloudConnection.displayName || mixcloudConnection.userName || "user"}.`);
+    return response.redirect("/?mixcloud=connected");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Mixcloud could not be connected.";
+    console.error("Mixcloud OAuth error:", message);
+    mixcloudConnection = { connected: false, accessToken: "", userKey: "", userName: "", displayName: "", connectedAt: "", error: message };
+    return response.redirect(`/?mixcloud=error&message=${encodeURIComponent(message)}`);
+  }
+});
+
+app.get("/api/mixcloud/status", async (request, response) => {
+  if (!mixcloudConnection.connected || !mixcloudConnection.accessToken) {
+    return response.json({ ok: true, ...publicMixcloudConnection() });
+  }
+  try {
+    const profileData = await readMixcloudJson("https://api.mixcloud.com/me/", {
+      headers: { Authorization: `Bearer ${mixcloudConnection.accessToken}` },
+    });
+    mixcloudConnection = {
+      ...mixcloudConnection,
+      connected: true,
+      userKey: String(profileData.key || mixcloudConnection.userKey),
+      userName: repairMojibake(profileData.username || mixcloudConnection.userName),
+      displayName: repairMojibake(profileData.name || profileData.username || mixcloudConnection.displayName),
+      error: "",
+    };
+    return response.json({ ok: true, ...publicMixcloudConnection() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The saved Mixcloud connection could not be validated.";
+    mixcloudConnection = { connected: false, accessToken: "", userKey: "", userName: "", displayName: "", connectedAt: "", error: "Mixcloud needs reconnecting." };
+    return response.status(401).json({ ok: false, ...publicMixcloudConnection(), details: message });
+  }
+});
+
+app.post("/api/mixcloud/disconnect", async (request, response) => {
+  const token = mixcloudConnection.accessToken;
+  if (token && MIXCLOUD_CLIENT_ID && MIXCLOUD_CLIENT_SECRET) {
+    try {
+      const basicCredentials = Buffer.from(`${MIXCLOUD_CLIENT_ID}:${MIXCLOUD_CLIENT_SECRET}`).toString("base64");
+      await fetch("https://www.mixcloud.com/oauth/revoke/", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicCredentials}`,
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        body: new URLSearchParams({ token, token_type_hint: "access_token" }).toString(),
+      });
+    } catch (error) {
+      console.warn("Mixcloud token revocation warning:", error instanceof Error ? error.message : error);
+    }
+  }
+  mixcloudConnection = { connected: false, accessToken: "", userKey: "", userName: "", displayName: "", connectedAt: "", error: "" };
+  response.json({ ok: true, connected: false, status: "Mixcloud disconnected from DavaBridge." });
 });
 
 app.get(["/website", "/website.html"], (request, response, next) => {
