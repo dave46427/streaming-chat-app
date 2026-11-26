@@ -532,7 +532,16 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           aria-label="DavaBridge"
         >
           <h1 className="sb-brand-title">
-            DAVABRIDGE
+            <span style={{ color: "#ff0000" }}>D</span>
+            <span style={{ color: "#ff3b00" }}>A</span>
+            <span style={{ color: "#53fc18" }}>V</span>
+            <span style={{ color: "#20d95a" }}>A</span>
+            <span style={{ color: "#1877f2" }}>B</span>
+            <span style={{ color: "#5155f5" }}>R</span>
+            <span style={{ color: "#9146ff" }}>I</span>
+            <span style={{ color: "#bd3bd7" }}>D</span>
+            <span style={{ color: "#ff5500" }}>G</span>
+            <span style={{ color: "#ff0000" }}>E</span>
           </h1>
 
           <p className="sb-tagline">
@@ -567,6 +576,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
     </main>
   );
 }
+
 
 
 
