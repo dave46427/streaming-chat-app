@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 
 export default function StartupScreen({ onContinue, onSkipSetup }) {
   const [ready, setReady] = useState(false);
@@ -261,7 +261,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
         .sb-brand-title {
           margin: 0;
-          color: #ffffff;
+          color: #73b9db;
 
           font-size:
             clamp(42px, 7vw, 100px);
@@ -275,11 +275,11 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           text-transform: uppercase;
 
           text-shadow:
-            0 0 5px #ffffff,
-            0 0 12px #22d3ee,
-            0 0 25px #00c8ff,
-            0 0 45px #2563eb,
-            0 0 70px rgba(168, 85, 247, 0.8);
+            1px 1px 0 #397da7,
+            2px 2px 0 #286487,
+            3px 3px 0 #1c4c70,
+            4px 4px 0 #123652,
+            5px 5px 0 #0a2038, 8px 10px 14px rgba(0,0,0,.75), 0 0 8px rgba(34,211,238,.45), 0 0 18px rgba(37,99,235,.28);
         }
 
         .sb-tagline {
@@ -394,7 +394,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           background:
             rgba(2, 9, 24, 0.84);
 
-          color: #ffffff;
+          color: #73b9db;
           font-size: 18px;
 
           box-shadow:
@@ -426,7 +426,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
         }
 
         .sb-skip:hover {
-          color: #ffffff;
+          color: #73b9db;
 
           border-color:
             rgba(103, 232, 249, 0.75);
@@ -543,3 +543,4 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
     </main>
   );
 }
+
