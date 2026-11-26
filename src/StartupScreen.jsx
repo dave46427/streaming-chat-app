@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function StartupScreen({ onContinue, onSkipSetup }) {
   const [ready, setReady] = useState(false);
@@ -65,13 +65,11 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           width: 100vw;
           height: 100vh;
           overflow: hidden;
-
           background-image: url("/streambridge-welcome-new.png");
           background-position: center center;
           background-repeat: no-repeat;
           background-size: contain;
           background-color: #01040d;
-
           isolation: isolate;
         }
 
@@ -80,31 +78,18 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           inset: 0;
           z-index: 2;
           pointer-events: none;
-
           background: linear-gradient(
             rgba(0, 3, 14, 0.78),
             rgba(0, 5, 18, 0.67)
           );
-
           animation: sbDarknessOff 5.6s ease-in-out forwards;
         }
 
         @keyframes sbDarknessOff {
-          0% {
-            opacity: 1;
-          }
-
-          30% {
-            opacity: 0.78;
-          }
-
-          65% {
-            opacity: 0.38;
-          }
-
-          100% {
-            opacity: 0;
-          }
+          0% { opacity: 1; }
+          30% { opacity: 0.78; }
+          65% { opacity: 0.38; }
+          100% { opacity: 0; }
         }
 
         .sb-city-light {
@@ -112,7 +97,6 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           inset: 0;
           z-index: 3;
           pointer-events: none;
-
           background: linear-gradient(
             90deg,
             rgba(0, 170, 255, 0.05) 0%,
@@ -120,29 +104,16 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
             rgba(64, 100, 255, 0.12) 65%,
             rgba(181, 48, 255, 0.09) 100%
           );
-
           mix-blend-mode: screen;
           opacity: 0;
-
           animation: sbCityOn 5.4s ease-in-out forwards;
         }
 
         @keyframes sbCityOn {
-          0% {
-            opacity: 0;
-          }
-
-          30% {
-            opacity: 0.2;
-          }
-
-          65% {
-            opacity: 0.55;
-          }
-
-          100% {
-            opacity: 0.8;
-          }
+          0% { opacity: 0; }
+          30% { opacity: 0.2; }
+          65% { opacity: 0.55; }
+          100% { opacity: 0.8; }
         }
 
         .sb-bridge-light {
@@ -153,7 +124,6 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           bottom: 24%;
           height: 26%;
           pointer-events: none;
-
           opacity: 0;
 
           background: linear-gradient(
@@ -261,40 +231,90 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
         .sb-brand-title {
           margin: 0;
-          color: transparent;
-            display: inline-block;
-            background: linear-gradient(90deg, #ff0000 0%, #53fc18 25%, #1877f2 45%, #9146ff 65%, #ff5500 85%, #ff0000 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+          display: inline-block;
 
-          font-size:
-            clamp(42px, 7vw, 100px);
-
+          font-size: clamp(42px, 7vw, 100px);
           font-weight: 900;
-
-          letter-spacing:
-            clamp(3px, 0.6vw, 10px);
-
+          letter-spacing: clamp(3px, 0.6vw, 10px);
           line-height: 1;
           text-transform: uppercase;
 
-          text-shadow:
-            1px 1px 0 #397da7,
-            2px 2px 0 #286487,
-            3px 3px 0 #1c4c70,
-            4px 4px 0 #123652,
-            5px 5px 0 #0a2038, 8px 10px 14px rgba(0,0,0,.75), 0 0 8px rgba(34,211,238,.45), 0 0 18px rgba(37,99,235,.28);
+          color: transparent;
+          -webkit-text-fill-color: transparent;
+
+          /*
+            DAVABRIDGE stays blue normally.
+
+            The narrow coloured area moves across the word:
+            Facebook blue
+            Kick green
+            YouTube red
+            Mixcloud blue
+            Twitch purple
+          */
+          background-image: linear-gradient(
+            90deg,
+
+            #4eb5e8 0%,
+            #4eb5e8 34%,
+
+            #1877f2 40%,
+            #53fc18 43%,
+            #ff0000 46%,
+            #168eea 49%,
+            #9146ff 52%,
+
+            #4eb5e8 58%,
+            #4eb5e8 100%
+          );
+
+          background-size: 400% 100%;
+          background-position: 0% 50%;
+
+          -webkit-background-clip: text;
+          background-clip: text;
+
+          animation:
+            sbPlatformSweep
+            5.5s
+            ease-in-out
+            4.5s
+            infinite;
+
+          filter:
+            drop-shadow(1px 1px 0 #397da7)
+            drop-shadow(2px 2px 0 #286487)
+            drop-shadow(3px 3px 0 #1c4c70)
+            drop-shadow(4px 4px 0 #123652)
+            drop-shadow(5px 5px 0 #0a2038)
+            drop-shadow(8px 10px 7px rgba(0, 0, 0, 0.7))
+            drop-shadow(0 0 8px rgba(34, 211, 238, 0.45))
+            drop-shadow(0 0 18px rgba(37, 99, 235, 0.28));
+        }
+
+        @keyframes sbPlatformSweep {
+          0% {
+            background-position: 0% 50%;
+          }
+
+          15% {
+            background-position: 0% 50%;
+          }
+
+          70% {
+            background-position: 100% 50%;
+          }
+
+          100% {
+            background-position: 100% 50%;
+          }
         }
 
         .sb-tagline {
           margin: 12px 0 0;
-
           color: #dffaff;
 
-          font-size:
-            clamp(12px, 1.4vw, 20px);
-
+          font-size: clamp(12px, 1.4vw, 20px);
           font-weight: 700;
           letter-spacing: 2px;
           line-height: 1.4;
@@ -396,15 +416,9 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
             1px solid
             rgba(91, 235, 255, 0.9);
 
-          background:
-            rgba(2, 9, 24, 0.84);
+          background: rgba(2, 9, 24, 0.84);
 
-          color: transparent;
-            display: inline-block;
-            background: linear-gradient(90deg, #ff0000 0%, #53fc18 25%, #1877f2 45%, #9146ff 65%, #ff5500 85%, #ff0000 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+          color: #67e8f9;
           font-size: 18px;
 
           box-shadow:
@@ -413,8 +427,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
         }
 
         .sb-continue:hover {
-          background:
-            rgba(7, 55, 88, 0.95);
+          background: rgba(7, 55, 88, 0.95);
 
           box-shadow:
             0 0 15px rgba(34, 211, 238, 0.75),
@@ -428,20 +441,14 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
             1px solid
             rgba(148, 163, 184, 0.4);
 
-          background:
-            rgba(2, 9, 24, 0.7);
+          background: rgba(2, 9, 24, 0.7);
 
           color: #cbd5e1;
           font-size: 13px;
         }
 
         .sb-skip:hover {
-          color: transparent;
-            display: inline-block;
-            background: linear-gradient(90deg, #ff0000 0%, #53fc18 25%, #1877f2 45%, #9146ff 65%, #ff5500 85%, #ff0000 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+          color: #ffffff;
 
           border-color:
             rgba(103, 232, 249, 0.75);
@@ -460,8 +467,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
         @media (max-width: 700px) {
           .sb-scene {
-            background-position:
-              center center;
+            background-position: center center;
           }
 
           .sb-brand {
@@ -471,25 +477,12 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           }
 
           .sb-brand-title {
-            font-size:
-              clamp(30px, 10vw, 54px);
-
+            font-size: clamp(30px, 10vw, 54px);
             letter-spacing: 3px;
           }
 
-          @keyframes sbPlatformRainbow {
-            0% {
-              background-position: 0% 50%;
-            }
-            100% {
-              background-position: 200% 50%;
-            }
-          }
-
           .sb-tagline {
-            font-size:
-              clamp(11px, 3.5vw, 16px);
-
+            font-size: clamp(11px, 3.5vw, 16px);
             letter-spacing: 1px;
           }
 
@@ -509,11 +502,15 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           .sb-bridge-light,
           .sb-connected,
           .sb-brand {
-            animation-duration:
-              0.01ms !important;
+            animation-duration: 0.01ms !important;
+            animation-delay: 0s !important;
+          }
 
-            animation-delay:
-              0s !important;
+          .sb-brand-title {
+            animation: none !important;
+            background-image: none;
+            color: #4eb5e8;
+            -webkit-text-fill-color: #4eb5e8;
           }
         }
       `}</style>
@@ -532,16 +529,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
           aria-label="DavaBridge"
         >
           <h1 className="sb-brand-title">
-            <span style={{ color: "#ff0000" }}>D</span>
-            <span style={{ color: "#ff3b00" }}>A</span>
-            <span style={{ color: "#53fc18" }}>V</span>
-            <span style={{ color: "#20d95a" }}>A</span>
-            <span style={{ color: "#1877f2" }}>B</span>
-            <span style={{ color: "#5155f5" }}>R</span>
-            <span style={{ color: "#9146ff" }}>I</span>
-            <span style={{ color: "#bd3bd7" }}>D</span>
-            <span style={{ color: "#ff5500" }}>G</span>
-            <span style={{ color: "#ff0000" }}>E</span>
+            DAVABRIDGE
           </h1>
 
           <p className="sb-tagline">
@@ -552,9 +540,7 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
         </div>
 
         <div
-          className={`sb-actions ${
-            ready ? "visible" : ""
-          }`}
+          className={`sb-actions ${ready ? "visible" : ""}`}
         >
           <button
             type="button"
@@ -576,8 +562,3 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
     </main>
   );
 }
-
-
-
-
-
