@@ -20,6 +20,11 @@ const MIXCLOUD_CLIENT_ID = String(process.env.MIXCLOUD_CLIENT_ID || "").trim();
 const MIXCLOUD_CLIENT_SECRET = String(process.env.MIXCLOUD_CLIENT_SECRET || "").trim();
 const MIXCLOUD_REDIRECT_URI = process.env.MIXCLOUD_REDIRECT_URI ||
   "https://streaming-chat-app-production-dc88.up.railway.app/auth/mixcloud/callback";
+const KICK_CLIENT_ID = String(process.env.KICK_CLIENT_ID || "").trim();
+const KICK_CLIENT_SECRET = String(process.env.KICK_CLIENT_SECRET || "").trim();
+const KICK_REDIRECT_URI = process.env.KICK_REDIRECT_URI ||
+  "https://streaming-chat-app-production-dc88.up.railway.app/auth/kick/callback";
+const KICK_SCOPES = ["user:read", "chat:write", "events:subscribe"];
 const FACEBOOK_APP_ID = String(process.env.FACEBOOK_APP_ID || "").trim();
 const FACEBOOK_APP_SECRET = String(process.env.FACEBOOK_APP_SECRET || "").trim();
 const FACEBOOK_REDIRECT_URI = process.env.FACEBOOK_REDIRECT_URI ||
@@ -28,6 +33,19 @@ const FACEBOOK_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || "v25.0";
 const FACEBOOK_POLL_INTERVAL_MS = Math.max(15000, Number(process.env.FACEBOOK_POLL_INTERVAL_MS || 15000));
 const FACEBOOK_RATE_LIMIT_COOLDOWN_MS = Math.max(15 * 60 * 1000, Number(process.env.FACEBOOK_RATE_LIMIT_COOLDOWN_MS || 60 * 60 * 1000));
 
+
+const kickLoginStates = new Map();
+let kickConnection = {
+  connected: false,
+  accessToken: "",
+  refreshToken: "",
+  expiresAt: 0,
+  userId: "",
+  userName: "",
+  connectedAt: "",
+  scopes: [],
+  error: "",
+};
 
 const mixcloudLoginStates = new Map();
 let mixcloudConnection = {
@@ -71,6 +89,12 @@ if (MIXCLOUD_CLIENT_ID && MIXCLOUD_CLIENT_SECRET) {
   console.log("Mixcloud Client ID and Client Secret loaded.");
 } else {
   console.warn("Mixcloud credentials were not found. Add MIXCLOUD_CLIENT_ID and MIXCLOUD_CLIENT_SECRET.");
+}
+
+if (KICK_CLIENT_ID && KICK_CLIENT_SECRET) {
+  console.log("Kick Client ID and Client Secret loaded.");
+} else {
+  console.warn("Kick credentials were not found. Add KICK_CLIENT_ID and KICK_CLIENT_SECRET.");
 }
 
 if (FACEBOOK_APP_ID && FACEBOOK_APP_SECRET) {
@@ -200,6 +224,8 @@ app.get("/api/health", (request, response) => {
     eulerApiKeyLoaded: Boolean(EULER_API_KEY),
     mixcloudCredentialsLoaded: Boolean(MIXCLOUD_CLIENT_ID && MIXCLOUD_CLIENT_SECRET),
     mixcloudConnected: mixcloudConnection.connected,
+    kickCredentialsLoaded: Boolean(KICK_CLIENT_ID && KICK_CLIENT_SECRET),
+    kickConnected: kickConnection.connected,
     facebookCredentialsLoaded: Boolean(FACEBOOK_APP_ID && FACEBOOK_APP_SECRET),
     facebookConnected: facebookConnection.connected,
     facebookPolling: Boolean(facebookPollTimer),
@@ -777,6 +803,194 @@ app.post("/api/mixcloud/disconnect", async (request, response) => {
   }
   mixcloudConnection = { connected: false, accessToken: "", userKey: "", userName: "", displayName: "", connectedAt: "", error: "" };
   response.json({ ok: true, connected: false, status: "Mixcloud disconnected from DavaBridge." });
+});
+
+
+function publicKickConnection() {
+  return {
+    connected: kickConnection.connected,
+    userId: kickConnection.userId,
+    userName: kickConnection.userName,
+    connectedAt: kickConnection.connectedAt,
+    scopes: kickConnection.scopes,
+    error: kickConnection.error,
+  };
+}
+
+function removeExpiredKickStates() {
+  const now = Date.now();
+  for (const [state, login] of kickLoginStates.entries()) {
+    if (now - login.createdAt > 10 * 60 * 1000) kickLoginStates.delete(state);
+  }
+}
+
+async function readKickJson(url, options = {}) {
+  const apiResponse = await fetch(url, options);
+  const data = await apiResponse.json().catch(() => ({}));
+  if (!apiResponse.ok || data?.error) {
+    const message = data?.message || data?.error_description || data?.error || `Kick returned HTTP ${apiResponse.status}.`;
+    throw new Error(String(message));
+  }
+  return data;
+}
+
+async function getKickProfile(accessToken) {
+  const profileData = await readKickJson("https://api.kick.com/public/v1/users", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+  const users = Array.isArray(profileData?.data) ? profileData.data : [];
+  const user = users[0] || profileData?.data || {};
+  return {
+    id: String(user?.user_id || user?.id || ""),
+    name: repairMojibake(user?.name || user?.username || user?.slug || "Kick user"),
+  };
+}
+
+app.get("/auth/kick", (request, response) => {
+  if (!KICK_CLIENT_ID || !KICK_CLIENT_SECRET) {
+    return response.status(503).json({ ok: false, error: "Kick is not configured. Add KICK_CLIENT_ID and KICK_CLIENT_SECRET." });
+  }
+
+  removeExpiredKickStates();
+  const state = crypto.randomBytes(32).toString("base64url");
+  const codeVerifier = crypto.randomBytes(64).toString("base64url");
+  kickLoginStates.set(state, { createdAt: Date.now(), codeVerifier });
+
+  const loginUrl = new URL("https://id.kick.com/oauth/authorize");
+  loginUrl.searchParams.set("response_type", "code");
+  loginUrl.searchParams.set("client_id", KICK_CLIENT_ID);
+  loginUrl.searchParams.set("redirect_uri", KICK_REDIRECT_URI);
+  loginUrl.searchParams.set("scope", KICK_SCOPES.join(" "));
+  loginUrl.searchParams.set("state", state);
+  loginUrl.searchParams.set("code_challenge", base64UrlSha256(codeVerifier));
+  loginUrl.searchParams.set("code_challenge_method", "S256");
+  return response.redirect(loginUrl.toString());
+});
+
+app.get("/auth/kick/callback", async (request, response) => {
+  const code = String(request.query.code || "");
+  const state = String(request.query.state || "");
+  const oauthError = String(request.query.error || "");
+  const oauthErrorDescription = String(request.query.error_description || "");
+
+  removeExpiredKickStates();
+  const login = kickLoginStates.get(state);
+
+  if (oauthError) {
+    kickConnection.error = oauthErrorDescription || "Kick login was cancelled.";
+    return response.redirect(`/?kick=error&message=${encodeURIComponent(kickConnection.error)}`);
+  }
+  if (!state || !login) {
+    kickConnection.error = "Kick login could not be verified. Please try connecting again.";
+    return response.redirect(`/?kick=error&message=${encodeURIComponent(kickConnection.error)}`);
+  }
+
+  kickLoginStates.delete(state);
+  if (!code) {
+    kickConnection.error = "Kick did not return an authorization code.";
+    return response.redirect(`/?kick=error&message=${encodeURIComponent(kickConnection.error)}`);
+  }
+
+  try {
+    const tokenBody = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: KICK_CLIENT_ID,
+      client_secret: KICK_CLIENT_SECRET,
+      code,
+      redirect_uri: KICK_REDIRECT_URI,
+      code_verifier: login.codeVerifier,
+    });
+    const tokenData = await readKickJson("https://id.kick.com/oauth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: tokenBody.toString(),
+    });
+    const accessToken = String(tokenData.access_token || "");
+    if (!accessToken) throw new Error("Kick did not return an access token.");
+
+    const profile = await getKickProfile(accessToken);
+    kickConnection = {
+      connected: true,
+      accessToken,
+      refreshToken: String(tokenData.refresh_token || ""),
+      expiresAt: Date.now() + Math.max(0, Number(tokenData.expires_in || 0)) * 1000,
+      userId: profile.id,
+      userName: profile.name,
+      connectedAt: new Date().toISOString(),
+      scopes: String(tokenData.scope || KICK_SCOPES.join(" ")).split(/\s+/).filter(Boolean),
+      error: "",
+    };
+    console.log(`Kick connected for ${kickConnection.userName || "user"}.`);
+    return response.redirect("/?kick=connected");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Kick could not be connected.";
+    console.error("Kick OAuth error:", message);
+    kickConnection = { connected: false, accessToken: "", refreshToken: "", expiresAt: 0, userId: "", userName: "", connectedAt: "", scopes: [], error: message };
+    return response.redirect(`/?kick=error&message=${encodeURIComponent(message)}`);
+  }
+});
+
+app.get("/api/kick/status", async (request, response) => {
+  if (!kickConnection.connected || !kickConnection.accessToken) {
+    return response.json({ ok: true, ...publicKickConnection() });
+  }
+  try {
+    const profile = await getKickProfile(kickConnection.accessToken);
+    kickConnection = { ...kickConnection, connected: true, userId: profile.id, userName: profile.name, error: "" };
+    return response.json({ ok: true, ...publicKickConnection() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The saved Kick connection could not be validated.";
+    kickConnection = { connected: false, accessToken: "", refreshToken: "", expiresAt: 0, userId: "", userName: "", connectedAt: "", scopes: [], error: "Kick needs reconnecting." };
+    return response.status(401).json({ ok: false, ...publicKickConnection(), details: message });
+  }
+});
+
+app.post("/api/kick/disconnect", async (request, response) => {
+  const token = kickConnection.accessToken;
+  if (token) {
+    try {
+      await fetch("https://id.kick.com/oauth/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams({ token, token_type_hint: "access_token" }).toString(),
+      });
+    } catch (error) {
+      console.warn("Kick token revocation warning:", error instanceof Error ? error.message : error);
+    }
+  }
+  kickConnection = { connected: false, accessToken: "", refreshToken: "", expiresAt: 0, userId: "", userName: "", connectedAt: "", scopes: [], error: "" };
+  response.json({ ok: true, connected: false, status: "Kick disconnected from DavaBridge." });
+});
+
+app.post("/api/kick/send-message", async (request, response) => {
+  const message = repairMojibake(request.body?.message).slice(0, 500);
+  if (!message) return response.status(400).json({ ok: false, sent: false, error: "Enter a Kick message first." });
+  if (!kickConnection.connected || !kickConnection.accessToken) {
+    return response.status(401).json({ ok: false, sent: false, error: "Kick is not connected." });
+  }
+  if (!kickConnection.scopes.includes("chat:write")) {
+    return response.status(403).json({ ok: false, sent: false, error: "Kick connected without the chat:write permission. Reconnect Kick and approve Write to Chat feed." });
+  }
+
+  try {
+    const result = await readKickJson("https://api.kick.com/public/v1/chat", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${kickConnection.accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ content: message, type: "user" }),
+    });
+    return response.json({ ok: true, sent: true, status: "Message sent to Kick.", data: result?.data || null });
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : "The Kick message could not be sent.";
+    console.error("Kick send error:", messageText);
+    return response.status(500).json({ ok: false, sent: false, error: messageText });
+  }
 });
 
 app.get(["/website", "/website.html"], (request, response, next) => {
