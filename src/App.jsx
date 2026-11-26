@@ -838,9 +838,6 @@ if (data.type === "tiktok_like") {
       ...themedButtonStyle,
       minWidth: 130,
       padding: "12px 18px",
-      background: "linear-gradient(180deg, #d96a18 0%, #b9470b 48%, #7a2705 100%)",
-      border: "1px solid rgba(255,145,62,.65)",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,.24), inset 0 -4px 6px rgba(74,20,0,.55), 0 5px 0 #501600, 0 10px 18px rgba(0,0,0,.50)",
       textShadow: "0 2px 2px rgba(0,0,0,.65)"
     };
     const badge = (connected) => ({
@@ -1172,6 +1169,7 @@ if (facebookConfigured) {
     </main>
   );
 }
+
 
 
 
