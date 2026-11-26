@@ -918,7 +918,7 @@ if (data.type === "tiktok_like") {
           </div>
 
           <div style={{ display: "grid", gap: 11, marginTop: 24 }}>
-            <button type="button" onClick={() => completeSetup(true)} style={{ ...themedButtonStyle, width: "100%", padding: "16px 20px", fontSize: "1rem", background: "linear-gradient(180deg, #e37422 0%, #bd4b0c 48%, #7f2905 100%)", border: "1px solid rgba(255,153,76,.7)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25), inset 0 -5px 7px rgba(74,20,0,.6), 0 6px 0 #501600, 0 13px 24px rgba(0,0,0,.55)", textShadow: "0 2px 2px rgba(0,0,0,.65)" }}>CONTINUE TO COMBINED CHAT</button>
+            <button type="button" onClick={() => completeSetup(true)} style={{ ...themedButtonStyle, width: "100%", padding: "16px 20px", fontSize: "1rem" }}>CONTINUE TO COMBINED CHAT</button>
             <button type="button" onClick={() => completeSetup(false)} style={{ width: "100%", border: "1px solid rgba(148,163,184,.28)", borderRadius: 14, padding: "13px 18px", color: "#cbd5e1", background: "rgba(15,23,42,.7)", fontWeight: 800, cursor: "pointer" }}>SKIP SETUP FOR NOW</button>
           </div>
           <p style={{ margin: "18px 0 0", color: "#64748b", textAlign: "center", fontSize: ".78rem" }}>Connected platforms and ordinary preferences are remembered on this device.</p>
@@ -1169,6 +1169,7 @@ if (facebookConfigured) {
     </main>
   );
 }
+
 
 
 
