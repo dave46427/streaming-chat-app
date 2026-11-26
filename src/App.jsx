@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
@@ -71,10 +71,10 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>Combined Chat</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"🟢"} Twitch: {twitchStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} YouTube: {youtubeStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} TikTok: {tiktokStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} Facebook: {facebookStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"ðŸŸ¢"} Twitch: {twitchStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} YouTube: {youtubeStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} TikTok: {tiktokStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} Facebook: {facebookStatus}</div>
 <div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
   TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
@@ -261,7 +261,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "👋 joined the LIVE",
+      text: "ðŸ‘‹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -273,7 +273,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
+      text: `â¤ï¸ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} â€¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -298,7 +298,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `🎁 sent ${giftName} ×${giftCount}`,
+                text: `ðŸŽ sent ${giftName} Ã—${giftCount}`,
               },
             ].slice(-100));
           }
@@ -837,7 +837,11 @@ if (data.type === "tiktok_like") {
     const connectionButton = {
       ...themedButtonStyle,
       minWidth: 130,
-      padding: "12px 18px"
+      padding: "12px 18px",
+      background: "linear-gradient(180deg, #d96a18 0%, #b9470b 48%, #7a2705 100%)",
+      border: "1px solid rgba(255,145,62,.65)",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,.24), inset 0 -4px 6px rgba(74,20,0,.55), 0 5px 0 #501600, 0 10px 18px rgba(0,0,0,.50)",
+      textShadow: "0 2px 2px rgba(0,0,0,.65)"
     };
     const badge = (connected) => ({
       minWidth: 130,
@@ -917,7 +921,7 @@ if (data.type === "tiktok_like") {
           </div>
 
           <div style={{ display: "grid", gap: 11, marginTop: 24 }}>
-            <button type="button" onClick={() => completeSetup(true)} style={{ ...themedButtonStyle, width: "100%", padding: "16px 20px", fontSize: "1rem" }}>CONTINUE TO COMBINED CHAT</button>
+            <button type="button" onClick={() => completeSetup(true)} style={{ ...themedButtonStyle, width: "100%", padding: "16px 20px", fontSize: "1rem", background: "linear-gradient(180deg, #e37422 0%, #bd4b0c 48%, #7f2905 100%)", border: "1px solid rgba(255,153,76,.7)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25), inset 0 -5px 7px rgba(74,20,0,.6), 0 6px 0 #501600, 0 13px 24px rgba(0,0,0,.55)", textShadow: "0 2px 2px rgba(0,0,0,.65)" }}>CONTINUE TO COMBINED CHAT</button>
             <button type="button" onClick={() => completeSetup(false)} style={{ width: "100%", border: "1px solid rgba(148,163,184,.28)", borderRadius: 14, padding: "13px 18px", color: "#cbd5e1", background: "rgba(15,23,42,.7)", fontWeight: 800, cursor: "pointer" }}>SKIP SETUP FOR NOW</button>
           </div>
           <p style={{ margin: "18px 0 0", color: "#64748b", textAlign: "center", fontSize: ".78rem" }}>Connected platforms and ordinary preferences are remembered on this device.</p>
@@ -1168,6 +1172,8 @@ if (facebookConfigured) {
     </main>
   );
 }
+
+
 
 
 
