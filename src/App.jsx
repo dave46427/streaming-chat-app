@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
+import { detectDeviceLanguage, getSavedLanguage, saveLanguage, supportedLanguages, translate } from "./languages";
 import StartupScreen from "./StartupScreen";
 import { getSavedTwitchChannel, saveTwitchChannel } from "./twitchChannel";
 import { YOUTUBE_CLIENT_ID, YOUTUBE_SCOPE, getYouTubeRedirectUri } from "./youtubeConfig";
@@ -42,7 +43,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -62,25 +63,25 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
   }, []);
   return (
     <main style={{ minHeight: "100vh", background: highContrast ? "#000" : (theme === "light" ? "#eef2ff" : "#0b1020"), color: highContrast ? "#fff" : (theme === "light" ? "#111827" : "white"), padding: "clamp(8px, 1.5vw, 14px)", fontSize: largeText ? "125%" : "100%", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
-      <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>Skip to chat messages</a>
+      <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>{t("skipToChat")}</a>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <button type="button" onClick={onBack} style={liveButtonStyle}>Back to Settings</button>
+        <button type="button" onClick={onBack} style={liveButtonStyle}>{t("backToSettings")}</button>
         <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>DAVABRIDGE LIVE</div>
-        <div style={{ color: "#70f0a0", fontWeight: 700 }}>LIVE CHAT</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>Add chat background<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
+        <div style={{ color: "#70f0a0", fontWeight: 700 }}>{t("liveChat")}</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>{t("addChatBackground")}<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
       </header>
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
-          <div style={{ fontSize: "1rem", fontWeight: 800 }}>Combined Chat</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"ðŸŸ¢"} Twitch: {twitchStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} YouTube: {youtubeStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} TikTok: {tiktokStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} Facebook: {facebookStatus}</div>
+          <div style={{ fontSize: "1rem", fontWeight: 800 }}>{t("combinedChatTitle")}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} Twitch: {twitchStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} YouTube: {youtubeStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} TikTok: {tiktokStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢"} Facebook: {facebookStatus}</div>
 <div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
   TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
         </div>
         <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
-          {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messages...</div> : messages.map((msg, index) => (
+          {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>{t("waitingForMessages")}</div> : messages.map((msg, index) => (
             <div key={msg.id ?? index} style={{ padding: "8px 11px", marginBottom: 7, background: chatBackground ? `${messageBackgroundColor}D9` : messageBackgroundColor, color: messageTextColor, borderRadius: 10, backdropFilter: chatBackground ? "blur(2px)" : "none", borderLeft: `4px solid ${msg.platform === "YouTube" ? youtubeMessageColor : msg.platform === "TikTok" ? tiktokMessageColor : twitchMessageColor}` }}>
               <div style={{ fontSize: ".76rem", color: "#aeb8d4", marginBottom: 4 }}>{msg.platform ?? "Chat"} {"\u2022"} <strong style={{ color: messageTextColor }}>{msg.username ?? "Viewer"}</strong></div>
               <div style={{ fontSize: ".98rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
@@ -94,6 +95,8 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
             <option value="youtube">YouTube</option>
             <option value="tiktok">TikTok</option>
             <option value="facebook">Facebook</option>
+            <option value="kick">Kick</option>
+            <option value="mixcloud">Mixcloud</option>
             <option value="both">Twitch + YouTube</option>
             <option value="all">All Sendable Platforms</option>
           </select>
@@ -115,7 +118,11 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
                   ? "SEND TO TIKTOK"
                   : sendTarget === "facebook"
                     ? "SEND TO FACEBOOK"
-                    : "SEND"}
+                    : sendTarget === "kick"
+                      ? t("sendToKick")
+                      : sendTarget === "mixcloud"
+                        ? t("sendToMixcloud")
+                        : "SEND"}
           </button>
         </form>
       </section>
@@ -137,19 +144,32 @@ export default function App() {
   const [entryStarted, setEntryStarted] = useState(true);
   const [appBackground, setAppBackground] = useState(() => localStorage.getItem("streambridge_app_background") || "");
   const [setupComplete, setSetupComplete] = useState(() => sessionStorage.getItem("streambridge_setup_complete") === "true" || localStorage.getItem("streambridge_setup_complete") === "true");
-  const detectLanguage = () => navigator.languages?.[0] || navigator.language || document.documentElement.lang || "en-GB";
-  const [language, setLanguage] = useState(detectLanguage);
+  const [languageMode, setLanguageMode] = useState(() => localStorage.getItem("davabridge_language") || "auto");
+  const [language, setLanguage] = useState(() => getSavedLanguage());
+
+  const changeLanguage = (value) => {
+    const nextMode = value || "auto";
+    setLanguageMode(nextMode);
+    setLanguage(saveLanguage(nextMode));
+  };
+
+  const t = (key) => translate(language, key);
+
   useEffect(() => {
-    const refreshLanguage = () => setLanguage(detectLanguage());
+    const refreshLanguage = () => {
+      if ((localStorage.getItem("davabridge_language") || "auto") === "auto") {
+        setLanguage(detectDeviceLanguage());
+      }
+    };
+
     window.addEventListener("languagechange", refreshLanguage);
     window.addEventListener("focus", refreshLanguage);
     document.addEventListener("visibilitychange", refreshLanguage);
-    const timer = window.setInterval(refreshLanguage, 2000);
+
     return () => {
       window.removeEventListener("languagechange", refreshLanguage);
       window.removeEventListener("focus", refreshLanguage);
       document.removeEventListener("visibilitychange", refreshLanguage);
-      window.clearInterval(timer);
     };
   }, []);
   const [theme, setTheme] = useState(() => localStorage.getItem("streambridge_theme") || "dark"); const themeBackgrounds = { dark: "#0b1020", purple: "#210b35", blue: "#071d3d", fire: "#351009", green: "#06261a", light: "#eef2ff" }; const themeBackground = themeBackgrounds[theme] || themeBackgrounds.dark;
@@ -210,11 +230,165 @@ export default function App() {
   const [twitchChannel, setTwitchChannel] = useState(() => getSavedTwitchChannel()); const [activeChannel, setActiveChannel] = useState(() => getSavedTwitchChannel());
   const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState(""); const [facebookConnected, setFacebookConnected] = useState(false); const [facebookStatus, setFacebookStatus] = useState("Not connected"); const [facebookPages, setFacebookPages] = useState([]);
     const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected"); const [tiktokViewers, setTiktokViewers] = useState(0); const [tiktokLikes, setTiktokLikes] = useState(0);
+  const [mixcloudConnected, setMixcloudConnected] = useState(false);
+  const [mixcloudStatus, setMixcloudStatus] = useState("Not connected");
+  const [mixcloudUser, setMixcloudUser] = useState("");
+
+  const [kickConnected, setKickConnected] = useState(false);
+  const [kickStatus, setKickStatus] = useState("Not connected");
+  const [kickUser, setKickUser] = useState("");
+
   const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");
   const recentTikTokMessagesRef = useRef(new Map());
   const tiktokReconnectTimerRef = useRef(null);
   const tiktokManualDisconnectRef = useRef(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mixcloudResult = params.get("mixcloud");
+    const mixcloudMessage = params.get("message");
+
+    if (mixcloudResult === "connected") {
+      setMixcloudStatus("Mixcloud connected. Checking account...");
+      refreshMixcloudStatus();
+    } else if (mixcloudResult === "error") {
+      setMixcloudConnected(false);
+      setMixcloudStatus(
+        mixcloudMessage || "Mixcloud could not be connected."
+      );
+    } else {
+      refreshMixcloudStatus();
+    }
+
+    if (mixcloudResult) {
+      params.delete("mixcloud");
+      params.delete("message");
+
+      const query = params.toString();
+
+      const cleanUrl =
+        window.location.pathname +
+        (query ? `?${query}` : "") +
+        window.location.hash;
+
+      window.history.replaceState(
+        {},
+        document.title,
+        cleanUrl
+      );
+    }
+  }, []);
+
+  const refreshMixcloudStatus = async () => {
+    try {
+      const response = await fetch("/api/mixcloud/status", {
+        cache: "no-store"
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        setMixcloudConnected(false);
+        setMixcloudUser("");
+        setMixcloudStatus(data.error || "Mixcloud needs reconnecting");
+        return;
+      }
+
+      const connected = Boolean(data.connected);
+      const userName = String(data.displayName || data.userName || "");
+
+      setMixcloudConnected(connected);
+      setMixcloudUser(userName);
+
+      setMixcloudStatus(
+        connected
+          ? `Connected${userName ? ` as ${userName}` : ""}`
+          : data.error || "Not connected"
+      );
+
+      if (connected) {
+        localStorage.setItem(
+          "streambridge_mixcloud_configured",
+          "true"
+        );
+      }
+    } catch (error) {
+      setMixcloudConnected(false);
+      setMixcloudUser("");
+      setMixcloudStatus(
+        `Mixcloud status failed: ${error.message}`
+      );
+    }
+  };
+
+  const refreshKickStatus = async () => {
+    try {
+      const response = await fetch("/api/kick/status", {
+        cache: "no-store"
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        setKickConnected(false);
+        setKickUser("");
+        setKickStatus(data.error || "Kick needs reconnecting");
+        return;
+      }
+
+      const connected = Boolean(data.connected);
+
+      setKickConnected(connected);
+      setKickUser(String(data.userName || ""));
+      setKickStatus(
+        connected
+          ? `Connected${data.userName ? ` as ${data.userName}` : ""}`
+          : data.error || "Not connected"
+      );
+
+      if (connected) {
+        localStorage.setItem("streambridge_kick_configured", "true");
+      }
+    } catch (error) {
+      setKickConnected(false);
+      setKickStatus(`Kick status failed: ${error.message}`);
+    }
+  };
+
+  const connectKick = () => {
+    setKickStatus("Opening Kick sign-in...");
+    window.location.href = "/auth/kick";
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const kickResult = params.get("kick");
+    const kickMessage = params.get("message");
+
+    if (kickResult === "connected") {
+      setKickStatus("Kick connected. Checking account...");
+      refreshKickStatus();
+    } else if (kickResult === "error") {
+      setKickConnected(false);
+      setKickStatus(kickMessage || "Kick could not be connected.");
+    } else {
+      refreshKickStatus();
+    }
+
+    if (kickResult) {
+      params.delete("kick");
+      params.delete("message");
+
+      const query = params.toString();
+      const cleanUrl =
+        window.location.pathname +
+        (query ? `?${query}` : "") +
+        window.location.hash;
+
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, []);
 
   useEffect(() => {
     let stopped = false;
@@ -261,7 +435,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "ðŸ‘‹ joined the LIVE",
+      text: "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -273,7 +447,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `â¤ï¸ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} â€¢ Total ${Number(data.total || 0)}`,
+      text: `ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¤ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -298,7 +472,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `ðŸŽ sent ${giftName} Ã—${giftCount}`,
+                text: `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â sent ${giftName} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â${giftCount}`,
               },
             ].slice(-100));
           }
@@ -700,6 +874,36 @@ if (data.type === "tiktok_like") {
     return data;
   };
   const sendTikTokMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const socket = tiktokSocketRef.current; if (!text) throw new Error("Enter a TikTok message first."); if (!tiktokConnected || !socket || socket.readyState !== WebSocket.OPEN) throw new Error("TikTok is not ready to send."); socket.send(JSON.stringify({ type: "send_tiktok_message", text })); };
+  const sendKickMessage = async (textOverride) => {
+    const text = cleanChatText(textOverride ?? chatInput).trim();
+
+    if (!text) {
+      throw new Error("Enter a Kick message first.");
+    }
+
+    if (!kickConnected) {
+      throw new Error("Kick is not connected.");
+    }
+
+    const response = await fetch("/api/kick/send-message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.ok || !data.sent) {
+      throw new Error(data.error || "The Kick message could not be sent.");
+    }
+
+    setKickStatus("Message sent to Kick.");
+  };
+
   const sendSelectedMessage = async () => {
     const text = cleanChatText(expandEmojiWords(chatInput)).trim();
     if (!text) return;
@@ -709,18 +913,21 @@ if (data.type === "tiktok_like") {
       if (sendTarget === "youtube") await sendYouTubeMessage(text);
       if (sendTarget === "tiktok") await sendTikTokMessage(text);
       if (sendTarget === "facebook") await sendFacebookMessage(text);
+      if (sendTarget === "kick") await sendKickMessage(text);
       if (sendTarget === "both") await Promise.all([sendTwitchMessage(text), sendYouTubeMessage(text)]);
       if (sendTarget === "all") {
         const sends = [];
         if (twitchConnected && activeChannel) sends.push(sendTwitchMessage(text));
         if (youtubeConnected && youtubeLiveChatId) sends.push(sendYouTubeMessage(text));
         if (facebookConnected) sends.push(sendFacebookMessage(text));
+        if (kickConnected) sends.push(sendKickMessage(text));
         if (!sends.length) throw new Error("No chat platforms are ready to send.");
         await Promise.all(sends);
       }
       setChatInput("");
     } catch (error) {
-      if (sendTarget === "facebook") setFacebookStatus(`Send failed: ${error.message}`);
+      if (sendTarget === "kick") setKickStatus(`Send failed: ${error.message}`);
+      else if (sendTarget === "facebook") setFacebookStatus(`Send failed: ${error.message}`);
       else if (sendTarget === "youtube") setYoutubeStatus(`Send failed: ${error.message}`);
       else if (sendTarget === "tiktok") setTiktokStatus(`Send failed: ${error.message}`);
       else if (sendTarget === "all") setFacebookStatus(`Send failed: ${error.message}`);
@@ -734,8 +941,9 @@ if (data.type === "tiktok_like") {
     (sendTarget === "youtube" && youtubeConnected && youtubeLiveChatId) ||
     (sendTarget === "tiktok" && tiktokConnected) ||
     (sendTarget === "facebook" && facebookConnected) ||
+    (sendTarget === "kick" && kickConnected) ||
     (sendTarget === "both" && twitchConnected && activeChannel && youtubeConnected && youtubeLiveChatId) ||
-    (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId) || facebookConnected))
+    (sendTarget === "all" && ((twitchConnected && activeChannel) || (youtubeConnected && youtubeLiveChatId) || facebookConnected || kickConnected))
   );
   if (safetyPage) {
     const safetyContent = {
@@ -903,17 +1111,42 @@ if (data.type === "tiktok_like") {
 <article style={platformCard}>
   <div>
     <strong style={{ fontSize: "1.08rem" }}>Kick</strong>
-    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>
+      Send and receive Kick chat
+    </div>
+    <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>
+      {kickStatus}
+    </div>
   </div>
-  <button type="button" style={connectionButton}>CONNECT</button>
+  {kickConnected
+    ? <div style={badge(true)}>CONNECTED</div>
+    : <button type="button" onClick={connectKick} style={connectionButton}>CONNECT</button>}
 </article>
 
 <article style={platformCard}>
   <div>
     <strong style={{ fontSize: "1.08rem" }}>Mixcloud</strong>
-    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Connect your Mixcloud account</div>
+
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>
+      Connect your Mixcloud account
+    </div>
+
+    <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>
+      {mixcloudStatus}
+    </div>
   </div>
-  <button type="button" onClick={connectMixcloud} style={connectionButton}>CONNECT</button>
+
+  {mixcloudConnected
+    ? <div style={badge(true)}>CONNECTED</div>
+    : (
+      <button
+        type="button"
+        onClick={connectMixcloud}
+        style={connectionButton}
+      >
+        CONNECT
+      </button>
+    )}
 </article>
           </div>
 
@@ -927,7 +1160,7 @@ if (data.type === "tiktok_like") {
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
   const connectAll = () => {
     const twitchToken = sessionStorage.getItem("twitch_access_token");
@@ -1085,16 +1318,16 @@ if (facebookConfigured) {
             All your chats. One place.
           </h1>
           <p style={{ margin: "0 auto", maxWidth: 620, color: theme === "light" ? "#475569" : "#b8c5db", lineHeight: 1.65, fontSize: "1.05rem" }}>
-            Connect your platforms and bring your communities together.
+            {t("homeSubtitle")}
           </p>
         </header>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 18 }}>
           <button type="button" onClick={connectAll} style={{ ...themedButtonStyle, width: "100%", padding: "17px 20px", fontSize: "1rem" }}>
-            CONNECT ALL
+            {t("connectAll")}
           </button>
           <button type="button" onClick={() => setShowLiveChat(true)} style={secondaryButtonStyle}>
-            COMBINED CHAT
+            {t("combinedChat")}
           </button>
         </div>
 
@@ -1109,21 +1342,36 @@ if (facebookConfigured) {
         }}>
           <span>{connectedCount} of 4 current chat connections ready</span>
 <span aria-hidden="true">&bull;</span>
-<span>Twitch: {twitchConnected ? "Connected" : "Not connected"}</span>
+<span>Twitch: {twitchConnected ? t("connected") : t("notConnected")}</span>
 <span aria-hidden="true">&bull;</span>
-<span>YouTube: {youtubeConnected ? "Connected" : "Not connected"}</span>
+<span>YouTube: {youtubeConnected ? t("connected") : t("notConnected")}</span>
 <span aria-hidden="true">&bull;</span>
-<span>TikTok: {tiktokConnected ? "Connected" : "Not connected"}</span>
+<span>TikTok: {tiktokConnected ? t("connected") : t("notConnected")}</span>
 <span aria-hidden="true">&bull;</span>
-<span>Facebook: {facebookConnected ? "Connected" : "Not connected"}</span>
+<span>Facebook: {facebookConnected ? t("connected") : t("notConnected")}</span>
 </div>
 
         <details style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 18, background: "rgba(15,23,42,.66)", overflow: "hidden" }}>
           <summary style={{ padding: "17px 20px", cursor: "pointer", fontWeight: 900, listStylePosition: "inside" }}>
-            SETTINGS & APPEARANCE
+            {t("settingsAppearance")}
           </summary>
           <div style={{ padding: "0 20px 22px", display: "grid", gap: 18 }}>
             <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+              <label>
+                <b>{t("language")} </b>
+                <select
+                  value={languageMode}
+                  onChange={(event) => changeLanguage(event.target.value)}
+                >
+                  <option value="auto">{t("automatic")}</option>
+                  {Object.entries(supportedLanguages).map(([code, name]) => (
+                    <option key={code} value={code}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label><b>Theme </b>
                 <select value={theme} onChange={(event) => changeTheme(event.target.value)}>
                   <option value="dark">Dark</option>

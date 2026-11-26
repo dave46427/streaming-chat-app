@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function StartupScreen({ onContinue, onSkipSetup }) {
   const [ready, setReady] = useState(false);
@@ -294,18 +294,6 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
 
         @keyframes sbPlatformSweep { 0% { background-position: 100% 50%; } 5% { background-position: 100% 50%; } 90% { background-position: 0% 50%; } 100% { background-position: 0% 50%; } }
 
-          15% {
-            background-position: 0% 50%;
-          }
-
-          70% {
-            background-position: 0% 50%;
-          }
-
-          100% {
-            background-position: 0% 50%;
-          }
-        }
 
         .sb-tagline {
           margin: 12px 0 0;
