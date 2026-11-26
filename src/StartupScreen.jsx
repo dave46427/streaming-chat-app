@@ -462,6 +462,15 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
             letter-spacing: 3px;
           }
 
+          @keyframes sbPlatformRainbow {
+            0% {
+              background-position: 0% 50%;
+            }
+            100% {
+              background-position: 200% 50%;
+            }
+          }
+
           .sb-tagline {
             font-size:
               clamp(11px, 3.5vw, 16px);
@@ -543,4 +552,5 @@ export default function StartupScreen({ onContinue, onSkipSetup }) {
     </main>
   );
 }
+
 
