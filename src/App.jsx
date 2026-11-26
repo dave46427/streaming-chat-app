@@ -95,6 +95,8 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>YouTube: {youtubeStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>TikTok: {tiktokStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Facebook: {facebookStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Kick: {kickStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Mixcloud: {mixcloudStatus}</div>
 <div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
   TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
