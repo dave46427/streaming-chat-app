@@ -71,10 +71,10 @@ function LiveChatScreen({ messages, onBack, messageText, setMessageText, onSend,
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>Combined Chat</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"🟢"} Twitch: {twitchStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} YouTube: {youtubeStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} TikTok: {tiktokStatus}</div>
-<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"🟢"} Facebook: {facebookStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"ðŸŸ¢"} Twitch: {twitchStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} YouTube: {youtubeStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} TikTok: {tiktokStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ðŸŸ¢"} Facebook: {facebookStatus}</div>
 <div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
   TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
 </div>
@@ -261,7 +261,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "👋 joined the LIVE",
+      text: "ðŸ‘‹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -273,7 +273,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `❤️ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} • Total ${Number(data.total || 0)}`,
+      text: `â¤ï¸ sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} â€¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -298,7 +298,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `🎁 sent ${giftName} ×${giftCount}`,
+                text: `ðŸŽ sent ${giftName} Ã—${giftCount}`,
               },
             ].slice(-100));
           }
@@ -452,7 +452,7 @@ if (data.type === "tiktok_like") {
   const disconnectYouTube = () => { sessionStorage.removeItem("youtube_access_token"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); setYoutubeConnected(false); setYoutubeLiveChatId(""); setYoutubeStatus("Not connected"); clearTimeout(youtubePollTimerRef.current); };
   const chooseChannel = () => { try { const saved = saveTwitchChannel(twitchChannel); setTwitchChannel(saved); setActiveChannel(saved); setMessages([]); setTwitchStatus(`Channel saved: ${saved}. Connecting...`); } catch (error) { setTwitchStatus(error.message); } };
 
-  useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); localStorage.setItem("streambridge_youtube_configured", "true"); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); localStorage.setItem("streambridge_twitch_configured", "true"); sessionStorage.setItem("streambridge_setup_in_progress", "true"); sessionStorage.removeItem("streambridge_setup_complete"); setSetupComplete(false); setStartupFinished(true); setShowLiveChat(false); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
+  useEffect(() => { const hash = new URLSearchParams(window.location.hash.substring(1)); const token = hash.get("access_token"); const error = hash.get("error"); if (!token && !error) return; const youtubePending = sessionStorage.getItem("youtube_oauth_pending") === "true"; if (youtubePending) { const expectedState = sessionStorage.getItem("youtube_oauth_state"); const returnedState = hash.get("state"); sessionStorage.removeItem("youtube_oauth_pending"); sessionStorage.removeItem("youtube_oauth_state"); if (error) setYoutubeStatus(`YouTube connection failed: ${error}`); else if (!expectedState || returnedState !== expectedState) setYoutubeStatus("YouTube connection stopped because the security check failed."); else { sessionStorage.setItem("youtube_access_token", token); localStorage.setItem("streambridge_youtube_configured", "true"); sessionStorage.setItem("streambridge_setup_in_progress", "true"); setStartupFinished(true); setShowLiveChat(false); setYoutubeConnected(true); setYoutubeStatus("YouTube connected. Looking for an active live broadcast..."); } } else if (token) { sessionStorage.setItem("twitch_access_token", token); localStorage.setItem("streambridge_twitch_configured", "true"); sessionStorage.setItem("streambridge_setup_in_progress", "true"); setStartupFinished(true); setShowLiveChat(false); } window.history.replaceState({}, document.title, window.location.pathname); }, []);
 
   useEffect(() => {
     const savedToken = sessionStorage.getItem("twitch_access_token");
@@ -728,7 +728,7 @@ if (data.type === "tiktok_like") {
     }
   };
 
-  const enabled = useMemo(() => platforms.filter((p) => p.enabled), [platforms]); const ready = enabled.length > 0 && enabled.every((p) => p.key.trim().length > 5); const update = (id, patch) => setPlatforms((items) => items.map((p) => p.id === id ? { ...p, ...patch } : p)); const finishSetup = () => { sessionStorage.setItem("streambridge_setup_complete", "true"); setSetupComplete(true); };
+  const enabled = useMemo(() => platforms.filter((p) => p.enabled), [platforms]); const ready = enabled.length > 0 && enabled.every((p) => p.key.trim().length > 5); const update = (id, patch) => setPlatforms((items) => items.map((p) => p.id === id ? { ...p, ...patch } : p)); const finishSetup = () => { localStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.removeItem("streambridge_setup_in_progress"); setSetupComplete(true); };
   const canSend = Boolean(chatInput.trim()) && (
     (sendTarget === "twitch" && twitchConnected && activeChannel) ||
     (sendTarget === "youtube" && youtubeConnected && youtubeLiveChatId) ||
