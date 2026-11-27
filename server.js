@@ -1382,6 +1382,14 @@ async function connectTikTok(socket, usernameValue) {
       data?.giftName
     ) || "TikTok gift";
 
+    console.log("DAVABRIDGE TIKTOK GIFT DEBUG:", {
+      giftId: data?.giftId,
+      giftName,
+      gift: data?.gift,
+      giftDetails: data?.giftDetails,
+      extendedGiftInfo: data?.extendedGiftInfo
+    });
+
     broadcastJson({
       type: "tiktok_gift",
       username: safeUsername(
@@ -1538,6 +1546,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
 
 
