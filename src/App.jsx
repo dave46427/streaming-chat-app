@@ -236,8 +236,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
 
         .davabridge-gift-alert {
           animation:
-            davabridgeGiftEnter .7s cubic-bezier(.15,.9,.25,1.3) both,
-            davabridgeGiftLeave .8s ease-in 6.2s both;
+            davabridgeGiftEnter .7s cubic-bezier(.15,.9,.25,1.3) both;
         }
 
         .davabridge-gift-visual {
@@ -245,7 +244,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
         }
 
         .davabridge-smoke {
-          animation: davabridgeSmoke .8s ease-out 6.2s both;
+          opacity: 0;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -271,7 +270,8 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
               display: "grid",
               placeItems: "center",
               pointerEvents: "none",
-              background: "radial-gradient(circle, rgba(124,58,237,.25), transparent 58%)"
+              background: "radial-gradient(circle, rgba(124,58,237,.25), transparent 58%)",
+              animation: `davabridgeGiftEnter .7s cubic-bezier(.15,.9,.25,1.3) both, davabridgeGiftLeave .8s ease-in ${Math.max(0.7, Number(giftAlert.duration || 7) - 0.8)}s both`
             }}
           >
             <div style={{ position: "relative", width: "min(520px, 88%)", textAlign: "center" }}>
@@ -342,7 +342,8 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
                     height: 52 + index * 4,
                     borderRadius: "50%",
                     background: "radial-gradient(circle, rgba(255,255,255,.92), rgba(148,163,184,.58) 48%, transparent 72%)",
-                    filter: "blur(5px)"
+                    filter: "blur(5px)",
+                    animation: `davabridgeSmoke .8s ease-out ${Math.max(0.7, Number(giftAlert.duration || 7) - 0.8)}s both`
                   }}
                 />
               ))}
@@ -957,14 +958,23 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
       username: cleanChatText(username).slice(0, 80),
       giftName: cleanChatText(giftName).slice(0, 100),
       count: Math.max(1, Number(count || 1)),
-      image: String(image || "")
+      image: String(image || ""),
+      duration: Math.min(
+        10,
+        Math.max(2, Number(giftSoundDuration || 7))
+      )
     });
 
     playGiftAlertSound();
 
+    const alertDuration = Math.min(
+      10,
+      Math.max(2, Number(giftSoundDuration || 7))
+    );
+
     giftAlertTimerRef.current = window.setTimeout(() => {
       setGiftAlert(null);
-    }, 7000);
+    }, alertDuration * 1000);
   };
 
   useEffect(() => {
@@ -2506,11 +2516,11 @@ const homeCard = {
                 </label>
 
                 <label style={{ display: "grid", gap: 7 }}>
-                  <b>Duration: {giftSoundDuration.toFixed(1)} sec</b>
+                  <b>Gift & sound duration: {giftSoundDuration.toFixed(1)} sec</b>
 
                   <input
                     type="range"
-                    min="0.5"
+                    min="2"
                     max="10"
                     step="0.1"
                     value={giftSoundDuration}
@@ -2656,6 +2666,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
