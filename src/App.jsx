@@ -626,127 +626,180 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
     }
   };
 
-  const playBuiltInGiftSound = (preset, volume) => {
+  const playAudioGiftSound = (source, volume) => {
+    if (!source) return;
+
+    stopGiftAlertSound();
+
     try {
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
+      const audio = new Audio(source);
+      customGiftAudioRef.current = audio;
 
-      if (!AudioContextClass) return;
+      const targetVolume = Math.min(
+        1,
+        Math.max(0, Number(volume || 0))
+      );
 
-      const context =
-        giftAudioContextRef.current || new AudioContextClass();
-
-      giftAudioContextRef.current = context;
-
-      if (context.state === "suspended") {
-        context.resume().catch(() => {});
-      }
-
-      const soundPatterns = {
-        neon: {
-          type: "triangle",
-          frequencies: [523.25, 659.25, 783.99, 1046.5],
-          spacing: 0.11,
-          noteLength: 0.45
-        },
-        arcade: {
-          type: "square",
-          frequencies: [329.63, 493.88, 659.25, 987.77],
-          spacing: 0.08,
-          noteLength: 0.24
-        },
-        magic: {
-          type: "sine",
-          frequencies: [659.25, 783.99, 987.77, 1318.51],
-          spacing: 0.14,
-          noteLength: 0.7
-        },
-        bass: {
-          type: "sawtooth",
-          frequencies: [164.81, 130.81, 98, 65.41],
-          spacing: 0.12,
-          noteLength: 0.65
-        },
-        celebration: {
-          type: "triangle",
-          frequencies: [392, 523.25, 659.25, 783.99, 1046.5],
-          spacing: 0.09,
-          noteLength: 0.48
-        }
-      };
-
-      const pattern =
-        soundPatterns[preset] || soundPatterns.neon;
-
-      const now = context.currentTime;
-      const duration = Math.max(
+      const requestedDuration = Math.max(
         0.5,
         Number(giftSoundDuration || 5)
       );
 
-      const fadeIn = Math.min(
-        duration,
-        Math.max(0.01, Number(giftSoundFadeIn || 0.1))
+      const requestedFadeIn = Math.max(
+        0,
+        Number(giftSoundFadeIn || 0)
       );
 
-      const fadeOut = Math.min(
-        duration,
-        Math.max(0.05, Number(giftSoundFadeOut || 0.8))
+      const requestedFadeOut = Math.max(
+        0,
+        Number(giftSoundFadeOut || 0)
       );
 
-      const masterGain = context.createGain();
+      audio.preload = "auto";
 
-      masterGain.gain.setValueAtTime(0.0001, now);
-      masterGain.gain.exponentialRampToValueAtTime(
-        Math.max(0.0001, volume * 0.42),
-        now + fadeIn
-      );
+      const beginPlayback = () => {
+        if (customGiftAudioRef.current !== audio) return;
 
-      masterGain.gain.setValueAtTime(
-        Math.max(0.0001, volume * 0.42),
-        now + Math.max(fadeIn, duration - fadeOut)
-      );
+        const audioDuration =
+          Number.isFinite(audio.duration) && audio.duration > 0
+            ? audio.duration
+            : requestedDuration;
 
-      masterGain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        now + duration
-      );
+        const maximumStart = Math.max(0, audioDuration - 0.1);
 
-      masterGain.connect(context.destination);
+        const startPosition = Math.min(
+          Math.max(0, Number(giftSoundStart || 0)),
+          maximumStart
+        );
 
-      pattern.frequencies.forEach((frequency, index) => {
-        const oscillator = context.createOscillator();
-        const noteGain = context.createGain();
-        const start = now + index * pattern.spacing;
+        const availableDuration = Math.max(
+          0.1,
+          audioDuration - startPosition
+        );
 
-        oscillator.type = pattern.type;
-        oscillator.frequency.setValueAtTime(frequency, start);
+        const playbackDuration = Math.min(
+          requestedDuration,
+          availableDuration
+        );
 
-        if (preset === "bass") {
-          oscillator.frequency.exponentialRampToValueAtTime(
-            Math.max(30, frequency / 2),
-            start + pattern.noteLength
-          );
+        const fadeIn = Math.min(
+          requestedFadeIn,
+          playbackDuration
+        );
+
+        const fadeOut = Math.min(
+          requestedFadeOut,
+          playbackDuration
+        );
+
+        audio.currentTime = startPosition;
+        audio.volume = fadeIn > 0 ? 0 : targetVolume;
+
+        audio.play().catch((error) => {
+          console.warn("Gift audio could not play:", error);
+        });
+
+        if (fadeIn > 0) {
+          const fadeStarted = Date.now();
+
+          customGiftFadeTimerRef.current =
+            window.setInterval(() => {
+              if (customGiftAudioRef.current !== audio) {
+                clearInterval(customGiftFadeTimerRef.current);
+                return;
+              }
+
+              const progress = Math.min(
+                1,
+                (Date.now() - fadeStarted) / (fadeIn * 1000)
+              );
+
+              audio.volume = Math.min(
+                1,
+                targetVolume * progress
+              );
+
+              if (progress >= 1) {
+                clearInterval(customGiftFadeTimerRef.current);
+              }
+            }, 40);
         }
 
-        noteGain.gain.setValueAtTime(0.0001, start);
-        noteGain.gain.exponentialRampToValueAtTime(
-          0.75,
-          start + 0.025
-        );
-        noteGain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          start + pattern.noteLength
+        const fadeOutStart = Math.max(
+          0,
+          playbackDuration - fadeOut
         );
 
-        oscillator.connect(noteGain);
-        noteGain.connect(masterGain);
-        oscillator.start(start);
-        oscillator.stop(start + pattern.noteLength);
-      });
-    } catch (error) {
-      console.warn("Built-in gift sound could not play:", error);
+        if (fadeOut > 0) {
+          window.setTimeout(() => {
+            if (customGiftAudioRef.current !== audio) return;
+
+            clearInterval(customGiftFadeTimerRef.current);
+
+            const startingVolume = audio.volume;
+            const fadeStarted = Date.now();
+
+            customGiftFadeTimerRef.current =
+              window.setInterval(() => {
+                if (customGiftAudioRef.current !== audio) {
+                  clearInterval(customGiftFadeTimerRef.current);
+                  return;
+                }
+
+                const progress = Math.min(
+                  1,
+                  (Date.now() - fadeStarted) / (fadeOut * 1000)
+                );
+
+                audio.volume = Math.max(
+                  0,
+                  startingVolume * (1 - progress)
+                );
+
+                if (progress >= 1) {
+                  clearInterval(customGiftFadeTimerRef.current);
+                }
+              }, 40);
+          }, fadeOutStart * 1000);
+        }
+
+        customGiftStopTimerRef.current =
+          window.setTimeout(() => {
+            if (customGiftAudioRef.current === audio) {
+              stopGiftAlertSound();
+            }
+          }, playbackDuration * 1000);
+      };
+
+      if (audio.readyState >= 1) {
+        beginPlayback();
+      }
+      else {
+        audio.addEventListener(
+          "loadedmetadata",
+          beginPlayback,
+          { once: true }
+        );
+      }
     }
+    catch (error) {
+      console.warn("Gift audio asset failed:", error);
+    }
+  };
+
+  const playBuiltInGiftSound = (preset, volume) => {
+    const soundAssets = {
+      neon: "/sounds/davabridge-neon.mp3",
+      arcade: "/sounds/davabridge-arcade.mp3",
+      magic: "/sounds/davabridge-magic.mp3",
+      bass: "/sounds/davabridge-bass-drop.mp3",
+      celebration: "/sounds/davabridge-celebration.mp3"
+    };
+
+    playAudioGiftSound(
+      soundAssets[preset] || soundAssets.neon,
+      volume
+    );
   };
 
   const playCustomGiftSound = (volume) => {
@@ -755,115 +808,8 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
       return;
     }
 
-    stopGiftAlertSound();
-
-    try {
-      const audio = new Audio(customGiftSound);
-      customGiftAudioRef.current = audio;
-
-      const targetVolume = Math.min(1, Math.max(0, volume));
-      const duration = Math.max(
-        0.5,
-        Number(giftSoundDuration || 5)
-      );
-
-      const fadeIn = Math.min(
-        duration,
-        Math.max(0, Number(giftSoundFadeIn || 0))
-      );
-
-      const fadeOut = Math.min(
-        duration,
-        Math.max(0, Number(giftSoundFadeOut || 0))
-      );
-
-      audio.preload = "auto";
-      audio.volume = fadeIn > 0 ? 0 : targetVolume;
-
-      const beginPlayback = () => {
-        const maximumStart = Number.isFinite(audio.duration)
-          ? Math.max(0, audio.duration - 0.1)
-          : Number(giftSoundStart || 0);
-
-        audio.currentTime = Math.min(
-          Math.max(0, Number(giftSoundStart || 0)),
-          maximumStart
-        );
-
-        audio.play().catch((error) => {
-          console.warn("Custom gift sound could not play:", error);
-        });
-
-        if (fadeIn > 0) {
-          const fadeStarted = Date.now();
-
-          customGiftFadeTimerRef.current = window.setInterval(() => {
-            const progress = Math.min(
-              1,
-              (Date.now() - fadeStarted) / (fadeIn * 1000)
-            );
-
-            audio.volume = Math.min(
-              1,
-              targetVolume * progress
-            );
-
-            if (progress >= 1) {
-              clearInterval(customGiftFadeTimerRef.current);
-            }
-          }, 40);
-        }
-
-        const fadeOutStart = Math.max(
-          0,
-          duration - fadeOut
-        );
-
-        if (fadeOut > 0) {
-          window.setTimeout(() => {
-            clearInterval(customGiftFadeTimerRef.current);
-
-            const startingVolume = audio.volume;
-            const fadeStarted = Date.now();
-
-            customGiftFadeTimerRef.current = window.setInterval(() => {
-              const progress = Math.min(
-                1,
-                (Date.now() - fadeStarted) / (fadeOut * 1000)
-              );
-
-              audio.volume = Math.max(
-                0,
-                startingVolume * (1 - progress)
-              );
-
-              if (progress >= 1) {
-                clearInterval(customGiftFadeTimerRef.current);
-              }
-            }, 40);
-          }, fadeOutStart * 1000);
-        }
-
-        customGiftStopTimerRef.current = window.setTimeout(() => {
-          stopGiftAlertSound();
-        }, duration * 1000);
-      };
-
-      if (audio.readyState >= 1) {
-        beginPlayback();
-      } else {
-        audio.addEventListener(
-          "loadedmetadata",
-          beginPlayback,
-          { once: true }
-        );
-      }
-    } catch (error) {
-      console.warn("Custom gift sound failed:", error);
-      playBuiltInGiftSound("neon", volume);
-    }
+    playAudioGiftSound(customGiftSound, volume);
   };
-
   const playGiftAlertSound = (volumeOverride) => {
     if (giftSoundMuted) return;
 
@@ -2709,6 +2655,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
