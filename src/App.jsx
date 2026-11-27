@@ -43,7 +43,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchViewers, youtubeViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -92,7 +92,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>{lt("combinedChatTitle")}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>Twitch: {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>YouTube: {youtubeStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>YouTube: {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>TikTok: {tiktokStatus} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Facebook: {facebookStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Kick: {kickStatus}</div>
@@ -246,7 +246,10 @@ export default function App() {
 
   const [twitchConnected, setTwitchConnected] = useState(false); const [twitchStatus, setTwitchStatus] = useState("Not connected"); const [twitchUser, setTwitchUser] = useState(null); const [twitchViewers, setTwitchViewers] = useState(0);
   const [twitchChannel, setTwitchChannel] = useState(() => getSavedTwitchChannel()); const [activeChannel, setActiveChannel] = useState(() => getSavedTwitchChannel());
-  const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token"))); const [youtubeStatus, setYoutubeStatus] = useState("Not connected"); const [youtubeLiveChatId, setYoutubeLiveChatId] = useState(""); const [facebookConnected, setFacebookConnected] = useState(false); const [facebookStatus, setFacebookStatus] = useState("Not connected"); const [facebookPages, setFacebookPages] = useState([]);
+  const [youtubeConnected, setYoutubeConnected] = useState(() => Boolean(sessionStorage.getItem("youtube_access_token")));
+const [youtubeStatus, setYoutubeStatus] = useState("Not connected");
+const [youtubeLiveChatId, setYoutubeLiveChatId] = useState("");
+const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnected, setFacebookConnected] = useState(false); const [facebookStatus, setFacebookStatus] = useState("Not connected"); const [facebookPages, setFacebookPages] = useState([]);
     const [tiktokUsername, setTiktokUsername] = useState(() => localStorage.getItem("tiktok_username") || ""); const [tiktokConnected, setTiktokConnected] = useState(false); const [tiktokStatus, setTiktokStatus] = useState("Not connected"); const [tiktokViewers, setTiktokViewers] = useState(0); const [tiktokLikes, setTiktokLikes] = useState(0);
   const [mixcloudConnected, setMixcloudConnected] = useState(false);
   const [mixcloudStatus, setMixcloudStatus] = useState("Not connected");
@@ -858,6 +861,100 @@ if (data.type === "tiktok_gift") {
   }, [activeChannel]);
   useEffect(() => { const token = sessionStorage.getItem("youtube_access_token"); if (!token) return; let cancelled = false; setYoutubeConnected(true); const apiFetch = async (path, options = {}) => { const response = await fetch(`${YOUTUBE_API}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); if (response.status === 401) throw new Error("YouTube login expired. Connect YouTube again."); if (!response.ok) { const details = await response.text(); throw new Error(details || "YouTube request failed."); } return response.json(); }; const pollMessages = async (liveChatId) => { if (cancelled) return; try { const params = new URLSearchParams({ part: "id,snippet,authorDetails", liveChatId, maxResults: "200" }); if (youtubeNextPageTokenRef.current) params.set("pageToken", youtubeNextPageTokenRef.current); const data = await apiFetch(`/liveChat/messages?${params.toString()}`); youtubeNextPageTokenRef.current = data.nextPageToken || youtubeNextPageTokenRef.current; const incoming = (data.items || []).filter((item) => item.snippet?.hasDisplayContent).map((item) => ({ id: `youtube-${item.id}`, platform: "YouTube", username: item.authorDetails?.displayName || "YouTube viewer", text: item.snippet?.displayMessage || "" })); if (incoming.length) setMessages((current) => { const known = new Set(current.map((item) => item.id)); return [...current, ...incoming.filter((item) => !known.has(item.id))].slice(-100); }); setYoutubeStatus("Listening to YouTube live chat"); youtubePollTimerRef.current = setTimeout(() => pollMessages(liveChatId), Math.max(data.pollingIntervalMillis || 5000, 2000)); } catch (error) { setYoutubeStatus(error.message || "YouTube chat connection error"); if (!cancelled) youtubePollTimerRef.current = setTimeout(() => pollMessages(liveChatId), 10000); } }; const startYouTubeChat = async () => { try { setYoutubeStatus("Looking for an active YouTube live broadcast..."); const data = await apiFetch("/liveBroadcasts?part=snippet&broadcastStatus=active&broadcastType=all&maxResults=5"); const broadcast = (data.items || []).find((item) => item.snippet?.liveChatId); const liveChatId = broadcast?.snippet?.liveChatId; if (!liveChatId) { setYoutubeLiveChatId(""); setYoutubeStatus("Connected, but no active YouTube live chat was found. Start a YouTube live broadcast, then reconnect."); return; } setYoutubeLiveChatId(liveChatId); youtubeNextPageTokenRef.current = ""; setYoutubeStatus(`Opening YouTube chat: ${broadcast.snippet?.title || "live broadcast"}`); pollMessages(liveChatId); } catch (error) { setYoutubeConnected(false); setYoutubeStatus(error.message || "Could not connect to YouTube chat"); } }; startYouTubeChat(); return () => { cancelled = true; clearTimeout(youtubePollTimerRef.current); }; }, [youtubeConnected]);
 
+  useEffect(() => {
+    if (!youtubeConnected) {
+      setYoutubeViewers(0);
+      return;
+    }
+
+    const token = sessionStorage.getItem("youtube_access_token");
+
+    if (!token) {
+      setYoutubeViewers(0);
+      return;
+    }
+
+    let cancelled = false;
+    let timer = null;
+
+    const loadYouTubeViewers = async () => {
+      try {
+        const broadcastResponse = await fetch(
+          `${YOUTUBE_API}/liveBroadcasts?part=snippet&broadcastStatus=active&broadcastType=all&maxResults=5`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!broadcastResponse.ok) {
+          throw new Error(
+            `YouTube broadcast request failed: ${broadcastResponse.status}`
+          );
+        }
+
+        const broadcastData = await broadcastResponse.json();
+
+        const broadcast = (broadcastData.items || []).find(
+          (item) => item.snippet?.liveChatId
+        );
+
+        if (!broadcast?.id) {
+          if (!cancelled) {
+            setYoutubeViewers(0);
+          }
+        } else {
+          const videoResponse = await fetch(
+            `${YOUTUBE_API}/videos?part=liveStreamingDetails&id=${encodeURIComponent(broadcast.id)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (!videoResponse.ok) {
+            throw new Error(
+              `YouTube viewer request failed: ${videoResponse.status}`
+            );
+          }
+
+          const videoData = await videoResponse.json();
+
+          if (!cancelled) {
+            const viewers =
+              videoData.items?.[0]?.liveStreamingDetails?.concurrentViewers;
+
+            setYoutubeViewers(
+              viewers !== undefined ? Number(viewers) : 0
+            );
+          }
+        }
+      } catch (error) {
+        console.warn("YouTube viewer count error:", error);
+
+        if (!cancelled) {
+          setYoutubeViewers(0);
+        }
+      }
+
+      if (!cancelled) {
+        timer = window.setTimeout(loadYouTubeViewers, 30000);
+      }
+    };
+
+    loadYouTubeViewers();
+
+    return () => {
+      cancelled = true;
+
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [youtubeConnected]);
+
     useEffect(() => {
     if (!twitchConnected || !twitchUser?.broadcaster_user_id) {
       setTwitchViewers(0);
@@ -1228,7 +1325,7 @@ const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchViewers={twitchViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
   const startProCheckout = async () => {
   try {
@@ -1491,6 +1588,9 @@ const homeCard = {
     </main>
   );
 }
+
+
+
 
 
 
