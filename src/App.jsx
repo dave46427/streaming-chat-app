@@ -43,7 +43,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchConnected, youtubeConnected, facebookConnected, kickConnected, mixcloudConnected, twitchViewers, youtubeViewers, facebookViewers, kickViewers, mixcloudViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, onClearChatBackground, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchConnected, youtubeConnected, facebookConnected, kickConnected, mixcloudConnected, twitchViewers, youtubeViewers, facebookViewers, kickViewers, mixcloudViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, onClearChatBackground, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor, giftAlert }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -113,7 +113,146 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
   )}
 </div>
       </header>
-      <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
+      <style>{`
+        @keyframes davabridgeGiftEnter {
+          0% { opacity: 0; transform: scale(.15) rotate(-14deg); }
+          45% { opacity: 1; transform: scale(1.16) rotate(4deg); }
+          65% { transform: scale(.94) rotate(-2deg); }
+          100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        @keyframes davabridgeGiftGlow {
+          0%, 100% { filter: drop-shadow(0 0 16px #a855f7) drop-shadow(0 0 34px #2563eb); }
+          50% { filter: drop-shadow(0 0 30px #ffffff) drop-shadow(0 0 65px #a855f7); }
+        }
+
+        @keyframes davabridgeGiftLeave {
+          0% { opacity: 1; transform: scale(1); filter: blur(0); }
+          35% { opacity: .9; transform: scale(1.12); }
+          100% { opacity: 0; transform: scale(1.7); filter: blur(18px); }
+        }
+
+        @keyframes davabridgeSmoke {
+          0% { opacity: 0; transform: translate(0, 20px) scale(.25); }
+          30% { opacity: .85; }
+          100% { opacity: 0; transform: translate(var(--smoke-x), -145px) scale(2.7); }
+        }
+
+        .davabridge-gift-alert {
+          animation:
+            davabridgeGiftEnter .7s cubic-bezier(.15,.9,.25,1.3) both,
+            davabridgeGiftLeave 1s ease-in 4s both;
+        }
+
+        .davabridge-gift-visual {
+          animation: davabridgeGiftGlow 1.15s ease-in-out infinite;
+        }
+
+        .davabridge-smoke {
+          animation: davabridgeSmoke 1.15s ease-out 3.85s both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .davabridge-gift-alert,
+          .davabridge-gift-visual,
+          .davabridge-smoke {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+          }
+        }
+      `}</style>
+
+      <section style={{ position: "relative", background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
+        {giftAlert && (
+          <div
+            className="davabridge-gift-alert"
+            role="alert"
+            aria-live="assertive"
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 20,
+              display: "grid",
+              placeItems: "center",
+              pointerEvents: "none",
+              background: "radial-gradient(circle, rgba(124,58,237,.25), transparent 58%)"
+            }}
+          >
+            <div style={{ position: "relative", width: "min(520px, 88%)", textAlign: "center" }}>
+              <div
+                className="davabridge-gift-visual"
+                style={{
+                  width: "clamp(150px, 32vw, 290px)",
+                  height: "clamp(150px, 32vw, 290px)",
+                  margin: "0 auto 12px",
+                  display: "grid",
+                  placeItems: "center"
+                }}
+              >
+                {giftAlert.image ? (
+                  <img
+                    src={giftAlert.image}
+                    alt=""
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain"
+                    }}
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      fontSize: "clamp(7rem, 24vw, 14rem)",
+                      lineHeight: 1
+                    }}
+                  >
+                    🎁
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  padding: "14px 20px",
+                  borderRadius: 20,
+                  color: "white",
+                  background: "rgba(5,8,20,.78)",
+                  border: "2px solid rgba(216,180,254,.8)",
+                  boxShadow: "0 0 35px rgba(168,85,247,.7)",
+                  backdropFilter: "blur(8px)"
+                }}
+              >
+                <div style={{ fontSize: "clamp(1.5rem, 6vw, 3rem)", fontWeight: 1000 }}>
+                  {giftAlert.giftName}
+                  {giftAlert.count > 1 ? ` ×${giftAlert.count}` : ""}
+                </div>
+
+                <div style={{ marginTop: 6, color: "#e9d5ff", fontSize: "clamp(1rem, 3vw, 1.35rem)", fontWeight: 900 }}>
+                  Sent by {giftAlert.username}
+                </div>
+              </div>
+
+              {[-120, -75, -30, 20, 65, 110].map((smokeX, index) => (
+                <span
+                  key={index}
+                  className="davabridge-smoke"
+                  style={{
+                    "--smoke-x": `${smokeX}px`,
+                    position: "absolute",
+                    left: `calc(50% + ${smokeX / 3}px)`,
+                    bottom: 20,
+                    width: 52 + index * 4,
+                    height: 52 + index * 4,
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle, rgba(255,255,255,.92), rgba(148,163,184,.58) 48%, transparent 72%)",
+                    filter: "blur(5px)"
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>{lt("combinedChatTitle")}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "6px 14px", marginTop: 7 }}>
@@ -294,6 +433,111 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
   const [kickViewers, setKickViewers] = useState(0);
 
   const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
+  const [giftAlert, setGiftAlert] = useState(null);
+  const [giftAlertVolume, setGiftAlertVolume] = useState(() => {
+    const saved = Number(localStorage.getItem("streambridge_gift_alert_volume"));
+    return Number.isFinite(saved) ? Math.min(100, Math.max(0, saved)) : 70;
+  });
+  const giftAlertTimerRef = useRef(null);
+  const giftAudioContextRef = useRef(null);
+
+  const playGiftAlertSound = (volumeOverride) => {
+    const volume = Math.min(
+      1,
+      Math.max(0, Number(volumeOverride ?? giftAlertVolume) / 100)
+    );
+
+    if (volume <= 0) return;
+
+    try {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      const context =
+        giftAudioContextRef.current || new AudioContextClass();
+
+      giftAudioContextRef.current = context;
+
+      if (context.state === "suspended") {
+        context.resume().catch(() => {});
+      }
+
+      const now = context.currentTime;
+      const masterGain = context.createGain();
+
+      masterGain.gain.setValueAtTime(0.0001, now);
+      masterGain.gain.exponentialRampToValueAtTime(
+        Math.max(0.0001, volume * 0.42),
+        now + 0.025
+      );
+      masterGain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 1.25
+      );
+      masterGain.connect(context.destination);
+
+      [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const noteGain = context.createGain();
+        const start = now + index * 0.11;
+
+        oscillator.type = index === 3 ? "sine" : "triangle";
+        oscillator.frequency.setValueAtTime(frequency, start);
+
+        noteGain.gain.setValueAtTime(0.0001, start);
+        noteGain.gain.exponentialRampToValueAtTime(
+          0.75,
+          start + 0.025
+        );
+        noteGain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + 0.42
+        );
+
+        oscillator.connect(noteGain);
+        noteGain.connect(masterGain);
+        oscillator.start(start);
+        oscillator.stop(start + 0.45);
+      });
+    } catch (error) {
+      console.warn("Gift alert sound could not play:", error);
+    }
+  };
+
+  const showGiftAlert = ({
+    username = "TikTok viewer",
+    giftName = "TikTok Gift",
+    count = 1,
+    image = ""
+  }) => {
+    clearTimeout(giftAlertTimerRef.current);
+
+    setGiftAlert({
+      id: `${Date.now()}-${Math.random()}`,
+      username: cleanChatText(username).slice(0, 80),
+      giftName: cleanChatText(giftName).slice(0, 100),
+      count: Math.max(1, Number(count || 1)),
+      image: String(image || "")
+    });
+
+    playGiftAlertSound();
+
+    giftAlertTimerRef.current = window.setTimeout(() => {
+      setGiftAlert(null);
+    }, 5000);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(giftAlertTimerRef.current);
+
+      if (giftAudioContextRef.current) {
+        giftAudioContextRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");
   const recentTikTokMessagesRef = useRef(new Map());
   const tiktokReconnectTimerRef = useRef(null);
@@ -1436,7 +1680,7 @@ const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchConnected={twitchConnected} youtubeConnected={youtubeConnected} facebookConnected={facebookConnected} kickConnected={kickConnected} mixcloudConnected={mixcloudConnected} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} mixcloudViewers={mixcloudViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} onClearChatBackground={clearChatBackground} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchConnected={twitchConnected} youtubeConnected={youtubeConnected} facebookConnected={facebookConnected} kickConnected={kickConnected} mixcloudConnected={mixcloudConnected} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} mixcloudViewers={mixcloudViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} onClearChatBackground={clearChatBackground} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} giftAlert={giftAlert} />;
 
   const startProCheckout = async () => {
   try {
@@ -1692,6 +1936,61 @@ const homeCard = {
               </div>
             </fieldset>
 
+            <fieldset style={{ borderRadius: 14, border: `1px solid ${accentColor}66`, padding: 16 }}>
+              <legend><b>Gift alerts</b></legend>
+
+              <div style={{ display: "grid", gap: 14 }}>
+                <label style={{ display: "grid", gap: 8 }}>
+                  <b>Alert volume: {giftAlertVolume}%</b>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={giftAlertVolume}
+                    onChange={(event) => {
+                      const nextVolume = Number(event.target.value);
+                      setGiftAlertVolume(nextVolume);
+                      localStorage.setItem(
+                        "streambridge_gift_alert_volume",
+                        String(nextVolume)
+                      );
+                    }}
+                    style={{
+                      width: "100%",
+                      accentColor
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLiveChat(true);
+
+                    window.setTimeout(() => {
+                      showGiftAlert({
+                        username: "DavaBridge Test",
+                        giftName: "Universe",
+                        count: 1,
+                        image: ""
+                      });
+                    }, 150);
+                  }}
+                  style={{
+                    ...themedButtonStyle,
+                    width: "100%"
+                  }}
+                >
+                  TEST GIFT ALERT
+                </button>
+
+                <div style={{ color: "#94a3b8", fontSize: ".82rem", lineHeight: 1.5 }}>
+                  The test opens Combined Chat, plays the alert sound and displays a five-second animated gift. Set volume to 0% for silent alerts.
+                </div>
+              </div>
+            </fieldset>
+
             <button type="button" onClick={openConnections} style={secondaryButtonStyle}>MANAGE PLATFORM CONNECTIONS</button>
           </div>
         </details>
@@ -1699,6 +1998,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
