@@ -2615,9 +2615,7 @@ const homeCard = {
                           image: ""
                         });
 
-                        window.setTimeout(() => {
-                          setShowLiveChat(false);
-                        }, 5200);
+
                       }, 150);
                     }}
                     style={{
@@ -2647,7 +2645,7 @@ const homeCard = {
                 }}>
                   Preview Sound plays only the selected sound. Test Full
                   Gift Alert opens Combined Chat and runs the complete
-                  five-second gift animation behind the chat messages.
+                  seven-second gift animation behind the chat messages.
                 </div>
               </div>
             </fieldset>
@@ -2658,6 +2656,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
