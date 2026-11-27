@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import { detectDeviceLanguage, getSavedLanguage, saveLanguage, supportedLanguages, translate } from "./languages";
 import StartupScreen from "./StartupScreen";
@@ -93,13 +93,11 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>{lt("combinedChatTitle")}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>Twitch: {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>YouTube: {youtubeStatus}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>TikTok: {tiktokStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>TikTok: {tiktokStatus} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Facebook: {facebookStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Kick: {kickStatus}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Mixcloud: {mixcloudStatus}</div>
-<div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
-  TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
-</div>
+
         </div>
         <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
           {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>{lt("waitingForMessages")}</div> : messages.map((msg, index) => (
