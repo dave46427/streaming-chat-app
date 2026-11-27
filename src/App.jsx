@@ -237,7 +237,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
         .davabridge-gift-alert {
           animation:
             davabridgeGiftEnter .7s cubic-bezier(.15,.9,.25,1.3) both,
-            davabridgeGiftLeave 1s ease-in 4s both;
+            davabridgeGiftLeave .8s ease-in 6.2s both;
         }
 
         .davabridge-gift-visual {
@@ -245,7 +245,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
         }
 
         .davabridge-smoke {
-          animation: davabridgeSmoke 1.15s ease-out 3.85s both;
+          animation: davabridgeSmoke .8s ease-out 6.2s both;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -551,7 +551,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
 
   const [giftSoundDuration, setGiftSoundDuration] = useState(() => {
     const saved = Number(localStorage.getItem("streambridge_gift_sound_duration"));
-    return Number.isFinite(saved) ? Math.min(10, Math.max(0.5, saved)) : 5;
+    return Number.isFinite(saved) ? Math.min(10, Math.max(0.5, saved)) : 7;
   });
 
   const [giftSoundFadeIn, setGiftSoundFadeIn] = useState(() => {
@@ -642,7 +642,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
 
       const requestedDuration = Math.max(
         0.5,
-        Number(giftSoundDuration || 5)
+        Number(giftSoundDuration || 7)
       );
 
       const requestedFadeIn = Math.max(
@@ -923,7 +923,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
     setGiftAlertVolume(70);
     setGiftSoundMuted(false);
     setGiftSoundStart(0);
-    setGiftSoundDuration(5);
+    setGiftSoundDuration(7);
     setGiftSoundFadeIn(0.1);
     setGiftSoundFadeOut(0.8);
     setCustomGiftSound("");
@@ -961,7 +961,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
 
     giftAlertTimerRef.current = window.setTimeout(() => {
       setGiftAlert(null);
-    }, 5000);
+    }, 7000);
   };
 
   useEffect(() => {
@@ -2655,6 +2655,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
