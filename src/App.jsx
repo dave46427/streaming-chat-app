@@ -91,12 +91,14 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>{lt("combinedChatTitle")}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>Twitch: {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>YouTube: {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>TikTok: {tiktokStatus} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Facebook: {facebookStatus} | Viewers: {Number(facebookViewers || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Kick: {kickStatus} | Viewers: {Number(kickViewers || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Mixcloud: {mixcloudStatus} | Viewers: {Number(mixcloudViewers || 0).toLocaleString()}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "6px 14px", marginTop: 7 }}>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Twitch:</strong> {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>YouTube:</strong> {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>TikTok:</strong> {tiktokStatus} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Facebook:</strong> {facebookStatus} | Viewers: {Number(facebookViewers || 0).toLocaleString()}</div>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Kick:</strong> {kickStatus} | Viewers: {Number(kickViewers || 0).toLocaleString()}</div>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Mixcloud:</strong> {mixcloudStatus} | Viewers: {Number(mixcloudViewers || 0).toLocaleString()}</div>
+          </div>
 
         </div>
         <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
