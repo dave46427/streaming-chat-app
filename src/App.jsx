@@ -1395,6 +1395,15 @@ if (facebookConfigured) {
 <span>Facebook: {facebookConnected ? t("connected") : t("notConnected")}</span>
 </div>
 
+        <section style={{ marginBottom: 22, padding: "22px", borderRadius: 20, textAlign: "center", border: `1px solid ${lighterAccent}88`, background: "rgba(124,58,237,.12)" }}>
+          <div style={{ color: lighterAccent, fontWeight: 900 }}>DAVABRIDGE PRO</div>
+          <h2>Unlock DavaBridge Pro</h2>
+          <p style={{ fontSize: "1.25rem", fontWeight: 900 }}>£4.99 / month</p>
+          <p>Upgrade to DavaBridge Pro and unlock premium DavaBridge features.</p>
+          <button type="button" onClick={startProCheckout} style={{ ...themedButtonStyle, width: "100%", maxWidth: 360 }}>
+            UPGRADE TO PRO - £4.99/MONTH
+          </button>
+        </section>
         <details style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 18, background: "rgba(15,23,42,.66)", overflow: "hidden" }}>
           <summary style={{ padding: "17px 20px", cursor: "pointer", fontWeight: 900, listStylePosition: "inside" }}>
             {t("settingsAppearance")}
