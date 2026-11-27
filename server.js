@@ -653,6 +653,90 @@ app.get("/api/facebook/live-status", async (request, response) => {
   }
 });
 
+app.get("/api/facebook/debug-live", async (request, response) => {
+  if (!facebookConnection.connected) {
+    return response.status(401).json({
+      ok: false,
+      connected: false,
+      error: "Facebook is not connected.",
+    });
+  }
+
+  if (!facebookConnection.pages.length) {
+    return response.status(404).json({
+      ok: false,
+      connected: true,
+      error: "No Facebook Pages were found.",
+    });
+  }
+
+  if (facebookCooldownRemainingMs() > 0) {
+    return response.status(429).json({
+      ok: false,
+      connected: true,
+      rateLimited: true,
+      retryAfter: new Date(facebookRateLimitedUntil).toISOString(),
+      error: facebookCooldownMessage(),
+    });
+  }
+
+  try {
+    const found = await findActiveFacebookLive();
+
+    if (!found) {
+      return response.json({
+        ok: true,
+        connected: true,
+        live: false,
+        status: "No active Facebook Live video was found.",
+      });
+    }
+
+    const liveVideoId = String(found.activeLiveVideo.id || "");
+
+    const debugUrl = new URL(
+      `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${encodeURIComponent(liveVideoId)}`
+    );
+
+    debugUrl.searchParams.set(
+      "fields",
+      "id,title,description,status,creation_time"
+    );
+
+    debugUrl.searchParams.set(
+      "access_token",
+      found.pageAccessToken
+    );
+
+    const liveVideoData = await readFacebookJson(debugUrl.toString());
+
+    return response.json({
+      ok: true,
+      connected: true,
+      live: true,
+      page: {
+        id: found.pageId,
+        name: repairMojibake(found.page.name) || "Facebook Page",
+      },
+      liveVideo: liveVideoData,
+      returnedFields: Object.keys(liveVideoData || {}),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not inspect Facebook Live fields.";
+
+    console.error("Facebook Live debug error:", message);
+
+    return response.status(500).json({
+      ok: false,
+      connected: true,
+      error: message,
+    });
+  }
+});
+
 app.post("/api/facebook/disconnect", (request, response) => {
   stopFacebookPolling();
   facebookConnection = { connected: false, userAccessToken: "", userId: "", userName: "", pages: [], connectedAt: "", error: "" };
@@ -1361,6 +1445,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
 
 
