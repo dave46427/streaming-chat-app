@@ -117,12 +117,12 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800 }}>{lt("combinedChatTitle")}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "6px 14px", marginTop: 7 }}>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Twitch:</strong> {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>YouTube:</strong> {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>TikTok:</strong> {tiktokConnected ? tiktokStatus : "Not connected"} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Facebook:</strong> {facebookStatus} | Viewers: {Number(facebookViewers || 0).toLocaleString()}</div>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Kick:</strong> {kickStatus} | Viewers: {Number(kickViewers || 0).toLocaleString()}</div>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Mixcloud:</strong> {mixcloudStatus} | Viewers: {Number(mixcloudViewers || 0).toLocaleString()}</div>
+            <div style={{ color: twitchConnected ? "#70f0a0" : "#ff5c5c", fontSize: ".76rem" }}><strong>Twitch:</strong> {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
+            <div style={{ color: youtubeConnected ? "#70f0a0" : "#ff5c5c", fontSize: ".76rem" }}><strong>YouTube:</strong> {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
+            <div style={{ color: tiktokConnected ? "#70f0a0" : "#ff5c5c", fontSize: ".76rem" }}><strong>TikTok:</strong> {tiktokConnected ? tiktokStatus : "Not connected"} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
+            <div style={{ color: facebookConnected ? "#70f0a0" : "#ff5c5c", fontSize: ".76rem" }}><strong>Facebook:</strong> {facebookStatus} | Viewers: {Number(facebookViewers || 0).toLocaleString()}</div>
+            <div style={{ color: kickConnected ? "#70f0a0" : "#ff5c5c", fontSize: ".76rem" }}><strong>Kick:</strong> {kickStatus} | Viewers: {Number(kickViewers || 0).toLocaleString()}</div>
+            <div style={{ color: mixcloudConnected ? "#70f0a0" : "#ff5c5c", fontSize: ".76rem" }}><strong>Mixcloud:</strong> {mixcloudStatus} | Viewers: {Number(mixcloudViewers || 0).toLocaleString()}</div>
           </div>
 
         </div>
@@ -1688,6 +1688,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
