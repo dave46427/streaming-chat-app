@@ -1,5 +1,6 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import express from "express";
+import Stripe from "stripe";
 import { createServer } from "node:http";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -12,6 +13,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = createServer(app);
 const PORT = Number(process.env.PORT || 3000);
+const STRIPE_SECRET_KEY = String(process.env.STRIPE_SECRET_KEY || "").trim();
+
+const stripe = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY)
+  : null;
 const DIST_FOLDER = path.join(__dirname, "dist");
 const WEBSITE_FILE = path.join(__dirname, "public", "website.html");
 
@@ -117,8 +123,8 @@ function repairMojibake(value) {
   let text = cleanText(value);
   if (!text) return "";
 
-  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ã, Â, â or ð.
-  if (/[ÃÂâð]/.test(text)) {
+  // Repair the common UTF-8-as-Windows-1252/Latin-1 corruption seen as Ãƒ, Ã‚, Ã¢ or Ã°.
+  if (/[ÃƒÃ‚Ã¢Ã°]/.test(text)) {
     try {
       const repaired = Buffer.from(text, "latin1").toString("utf8");
       if (repaired && !repaired.includes("?")) text = repaired;
@@ -217,6 +223,60 @@ async function readFacebookJson(url, options = {}) {
   return data;
 }
 
+app.post("/api/stripe/create-checkout-session", async (request, response) => {
+  if (!stripe) {
+    return response.status(503).json({
+      ok: false,
+      error: "Stripe is not configured on the DavaBridge server.",
+    });
+  }
+
+  try {
+    const origin =
+      process.env.DAVABRIDGE_PUBLIC_URL ||
+      `${request.protocol}://${request.get("host")}`;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            product_data: {
+              name: "DavaBridge Pro",
+              description: "DavaBridge Pro monthly subscription",
+            },
+            recurring: {
+              interval: "month",
+            },
+            unit_amount: 499,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${origin}/?stripe=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/?stripe=cancelled`,
+    });
+
+    return response.json({
+      ok: true,
+      url: session.url,
+    });
+  } catch (error) {
+    console.error(
+      "Stripe Checkout error:",
+      error instanceof Error ? error.message : error
+    );
+
+    return response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not start DavaBridge Pro checkout.",
+    });
+  }
+});
 app.get("/api/health", (request, response) => {
   response.json({
     ok: true,
@@ -1283,6 +1343,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
 
 

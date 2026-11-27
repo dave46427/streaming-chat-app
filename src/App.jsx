@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import { detectDeviceLanguage, getSavedLanguage, saveLanguage, supportedLanguages, translate } from "./languages";
 import StartupScreen from "./StartupScreen";
@@ -455,7 +455,7 @@ if (data.type === "tiktok_join") {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ joined the LIVE",
+      text: "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¹Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹ joined the LIVE",
     },
   ].slice(-100));
 }
@@ -467,7 +467,7 @@ if (data.type === "tiktok_like") {
       id: `tiktok-like-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
       username: cleanChatText(data.username || "TikTok viewer"),
-      text: `ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¤ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ Total ${Number(data.total || 0)}`,
+      text: `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Total ${Number(data.total || 0)}`,
     },
   ].slice(-100));
 }
@@ -492,7 +492,7 @@ if (data.type === "tiktok_like") {
                 id: `tiktok-gift-${Date.now()}-${Math.random()}`,
                 platform: "TikTok",
                 username: giftUsername,
-                text: `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â sent ${giftName} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â${giftCount}`,
+                text: `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â sent ${giftName} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â${giftCount}`,
               },
             ].slice(-100));
           }
@@ -1180,7 +1180,33 @@ if (data.type === "tiktok_like") {
 
   if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
-  const connectAll = () => {
+  const startProCheckout = async () => {
+  try {
+    const response = await fetch("/api/stripe/create-checkout-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok || !data.url) {
+      throw new Error(
+        data.error || "Could not start DavaBridge Pro checkout."
+      );
+    }
+
+    window.location.href = data.url;
+  } catch (error) {
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Could not start DavaBridge Pro checkout."
+    );
+  }
+};
+const connectAll = () => {
     const twitchToken = sessionStorage.getItem("twitch_access_token");
     const youtubeToken = sessionStorage.getItem("youtube_access_token");
     const savedTikTokUsername = localStorage.getItem("tiktok_username") || "";
@@ -1435,6 +1461,7 @@ if (facebookConfigured) {
     </main>
   );
 }
+
 
 
 
