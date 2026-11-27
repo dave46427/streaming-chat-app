@@ -434,6 +434,42 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
 
   const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
   const [giftAlert, setGiftAlert] = useState(null);
+  const [giftSoundPreset, setGiftSoundPreset] = useState(() =>
+    localStorage.getItem("streambridge_gift_sound_preset") || "neon"
+  );
+
+  const [customGiftSound, setCustomGiftSound] = useState(() =>
+    localStorage.getItem("streambridge_custom_gift_sound") || ""
+  );
+
+  const [customGiftSoundName, setCustomGiftSoundName] = useState(() =>
+    localStorage.getItem("streambridge_custom_gift_sound_name") || ""
+  );
+
+  const [giftSoundMuted, setGiftSoundMuted] = useState(() =>
+    localStorage.getItem("streambridge_gift_sound_muted") === "true"
+  );
+
+  const [giftSoundStart, setGiftSoundStart] = useState(() => {
+    const saved = Number(localStorage.getItem("streambridge_gift_sound_start"));
+    return Number.isFinite(saved) ? Math.min(20, Math.max(0, saved)) : 0;
+  });
+
+  const [giftSoundDuration, setGiftSoundDuration] = useState(() => {
+    const saved = Number(localStorage.getItem("streambridge_gift_sound_duration"));
+    return Number.isFinite(saved) ? Math.min(10, Math.max(0.5, saved)) : 5;
+  });
+
+  const [giftSoundFadeIn, setGiftSoundFadeIn] = useState(() => {
+    const saved = Number(localStorage.getItem("streambridge_gift_sound_fade_in"));
+    return Number.isFinite(saved) ? Math.min(3, Math.max(0, saved)) : 0.1;
+  });
+
+  const [giftSoundFadeOut, setGiftSoundFadeOut] = useState(() => {
+    const saved = Number(localStorage.getItem("streambridge_gift_sound_fade_out"));
+    return Number.isFinite(saved) ? Math.min(3, Math.max(0, saved)) : 0.8;
+  });
+
   const [giftAlertVolume, setGiftAlertVolume] = useState(() => {
     const saved = Number(localStorage.getItem("streambridge_gift_alert_volume"));
     return Number.isFinite(saved) ? Math.min(100, Math.max(0, saved)) : 70;
@@ -441,14 +477,22 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
   const giftAlertTimerRef = useRef(null);
   const giftAudioContextRef = useRef(null);
 
-  const playGiftAlertSound = (volumeOverride) => {
-    const volume = Math.min(
-      1,
-      Math.max(0, Number(volumeOverride ?? giftAlertVolume) / 100)
-    );
+  const customGiftAudioRef = useRef(null);
+  const customGiftFadeTimerRef = useRef(null);
+  const customGiftStopTimerRef = useRef(null);
 
-    if (volume <= 0) return;
+  const stopGiftAlertSound = () => {
+    clearInterval(customGiftFadeTimerRef.current);
+    clearTimeout(customGiftStopTimerRef.current);
 
+    if (customGiftAudioRef.current) {
+      customGiftAudioRef.current.pause();
+      customGiftAudioRef.current.currentTime = 0;
+      customGiftAudioRef.current = null;
+    }
+  };
+
+  const playBuiltInGiftSound = (preset, volume) => {
     try {
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
@@ -464,27 +508,92 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
         context.resume().catch(() => {});
       }
 
+      const soundPatterns = {
+        neon: {
+          type: "triangle",
+          frequencies: [523.25, 659.25, 783.99, 1046.5],
+          spacing: 0.11,
+          noteLength: 0.45
+        },
+        arcade: {
+          type: "square",
+          frequencies: [329.63, 493.88, 659.25, 987.77],
+          spacing: 0.08,
+          noteLength: 0.24
+        },
+        magic: {
+          type: "sine",
+          frequencies: [659.25, 783.99, 987.77, 1318.51],
+          spacing: 0.14,
+          noteLength: 0.7
+        },
+        bass: {
+          type: "sawtooth",
+          frequencies: [164.81, 130.81, 98, 65.41],
+          spacing: 0.12,
+          noteLength: 0.65
+        },
+        celebration: {
+          type: "triangle",
+          frequencies: [392, 523.25, 659.25, 783.99, 1046.5],
+          spacing: 0.09,
+          noteLength: 0.48
+        }
+      };
+
+      const pattern =
+        soundPatterns[preset] || soundPatterns.neon;
+
       const now = context.currentTime;
+      const duration = Math.max(
+        0.5,
+        Number(giftSoundDuration || 5)
+      );
+
+      const fadeIn = Math.min(
+        duration,
+        Math.max(0.01, Number(giftSoundFadeIn || 0.1))
+      );
+
+      const fadeOut = Math.min(
+        duration,
+        Math.max(0.05, Number(giftSoundFadeOut || 0.8))
+      );
+
       const masterGain = context.createGain();
 
       masterGain.gain.setValueAtTime(0.0001, now);
       masterGain.gain.exponentialRampToValueAtTime(
         Math.max(0.0001, volume * 0.42),
-        now + 0.025
+        now + fadeIn
       );
+
+      masterGain.gain.setValueAtTime(
+        Math.max(0.0001, volume * 0.42),
+        now + Math.max(fadeIn, duration - fadeOut)
+      );
+
       masterGain.gain.exponentialRampToValueAtTime(
         0.0001,
-        now + 1.25
+        now + duration
       );
+
       masterGain.connect(context.destination);
 
-      [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+      pattern.frequencies.forEach((frequency, index) => {
         const oscillator = context.createOscillator();
         const noteGain = context.createGain();
-        const start = now + index * 0.11;
+        const start = now + index * pattern.spacing;
 
-        oscillator.type = index === 3 ? "sine" : "triangle";
+        oscillator.type = pattern.type;
         oscillator.frequency.setValueAtTime(frequency, start);
+
+        if (preset === "bass") {
+          oscillator.frequency.exponentialRampToValueAtTime(
+            Math.max(30, frequency / 2),
+            start + pattern.noteLength
+          );
+        }
 
         noteGain.gain.setValueAtTime(0.0001, start);
         noteGain.gain.exponentialRampToValueAtTime(
@@ -493,19 +602,242 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
         );
         noteGain.gain.exponentialRampToValueAtTime(
           0.0001,
-          start + 0.42
+          start + pattern.noteLength
         );
 
         oscillator.connect(noteGain);
         noteGain.connect(masterGain);
         oscillator.start(start);
-        oscillator.stop(start + 0.45);
+        oscillator.stop(start + pattern.noteLength);
       });
     } catch (error) {
-      console.warn("Gift alert sound could not play:", error);
+      console.warn("Built-in gift sound could not play:", error);
     }
   };
 
+  const playCustomGiftSound = (volume) => {
+    if (!customGiftSound) {
+      playBuiltInGiftSound("neon", volume);
+      return;
+    }
+
+    stopGiftAlertSound();
+
+    try {
+      const audio = new Audio(customGiftSound);
+      customGiftAudioRef.current = audio;
+
+      const targetVolume = Math.min(1, Math.max(0, volume));
+      const duration = Math.max(
+        0.5,
+        Number(giftSoundDuration || 5)
+      );
+
+      const fadeIn = Math.min(
+        duration,
+        Math.max(0, Number(giftSoundFadeIn || 0))
+      );
+
+      const fadeOut = Math.min(
+        duration,
+        Math.max(0, Number(giftSoundFadeOut || 0))
+      );
+
+      audio.preload = "auto";
+      audio.volume = fadeIn > 0 ? 0 : targetVolume;
+
+      const beginPlayback = () => {
+        const maximumStart = Number.isFinite(audio.duration)
+          ? Math.max(0, audio.duration - 0.1)
+          : Number(giftSoundStart || 0);
+
+        audio.currentTime = Math.min(
+          Math.max(0, Number(giftSoundStart || 0)),
+          maximumStart
+        );
+
+        audio.play().catch((error) => {
+          console.warn("Custom gift sound could not play:", error);
+        });
+
+        if (fadeIn > 0) {
+          const fadeStarted = Date.now();
+
+          customGiftFadeTimerRef.current = window.setInterval(() => {
+            const progress = Math.min(
+              1,
+              (Date.now() - fadeStarted) / (fadeIn * 1000)
+            );
+
+            audio.volume = Math.min(
+              1,
+              targetVolume * progress
+            );
+
+            if (progress >= 1) {
+              clearInterval(customGiftFadeTimerRef.current);
+            }
+          }, 40);
+        }
+
+        const fadeOutStart = Math.max(
+          0,
+          duration - fadeOut
+        );
+
+        if (fadeOut > 0) {
+          window.setTimeout(() => {
+            clearInterval(customGiftFadeTimerRef.current);
+
+            const startingVolume = audio.volume;
+            const fadeStarted = Date.now();
+
+            customGiftFadeTimerRef.current = window.setInterval(() => {
+              const progress = Math.min(
+                1,
+                (Date.now() - fadeStarted) / (fadeOut * 1000)
+              );
+
+              audio.volume = Math.max(
+                0,
+                startingVolume * (1 - progress)
+              );
+
+              if (progress >= 1) {
+                clearInterval(customGiftFadeTimerRef.current);
+              }
+            }, 40);
+          }, fadeOutStart * 1000);
+        }
+
+        customGiftStopTimerRef.current = window.setTimeout(() => {
+          stopGiftAlertSound();
+        }, duration * 1000);
+      };
+
+      if (audio.readyState >= 1) {
+        beginPlayback();
+      } else {
+        audio.addEventListener(
+          "loadedmetadata",
+          beginPlayback,
+          { once: true }
+        );
+      }
+    } catch (error) {
+      console.warn("Custom gift sound failed:", error);
+      playBuiltInGiftSound("neon", volume);
+    }
+  };
+
+  const playGiftAlertSound = (volumeOverride) => {
+    if (giftSoundMuted) return;
+
+    const volume = Math.min(
+      1,
+      Math.max(
+        0,
+        Number(volumeOverride ?? giftAlertVolume) / 100
+      )
+    );
+
+    if (volume <= 0) return;
+
+    if (giftSoundPreset === "custom") {
+      playCustomGiftSound(volume);
+      return;
+    }
+
+    playBuiltInGiftSound(giftSoundPreset, volume);
+  };
+
+  const onCustomGiftSoundChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = [
+      "audio/mpeg",
+      "audio/mp3",
+      "audio/wav",
+      "audio/x-wav"
+    ];
+
+    if (
+      !allowedTypes.includes(file.type) &&
+      !/\.(mp3|wav)$/i.test(file.name)
+    ) {
+      alert("Choose an MP3 or WAV sound file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Choose a sound file under 2 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const value = String(reader.result || "");
+
+      try {
+        localStorage.setItem(
+          "streambridge_custom_gift_sound",
+          value
+        );
+
+        localStorage.setItem(
+          "streambridge_custom_gift_sound_name",
+          file.name
+        );
+
+        localStorage.setItem(
+          "streambridge_gift_sound_preset",
+          "custom"
+        );
+
+        setCustomGiftSound(value);
+        setCustomGiftSoundName(file.name);
+        setGiftSoundPreset("custom");
+      } catch {
+        alert(
+          "This sound is too large to save. Try a shorter MP3 file."
+        );
+      }
+    };
+
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const resetGiftSoundMixer = () => {
+    stopGiftAlertSound();
+
+    setGiftSoundPreset("neon");
+    setGiftAlertVolume(70);
+    setGiftSoundMuted(false);
+    setGiftSoundStart(0);
+    setGiftSoundDuration(5);
+    setGiftSoundFadeIn(0.1);
+    setGiftSoundFadeOut(0.8);
+    setCustomGiftSound("");
+    setCustomGiftSoundName("");
+
+    [
+      "streambridge_gift_sound_preset",
+      "streambridge_gift_alert_volume",
+      "streambridge_gift_sound_muted",
+      "streambridge_gift_sound_start",
+      "streambridge_gift_sound_duration",
+      "streambridge_gift_sound_fade_in",
+      "streambridge_gift_sound_fade_out",
+      "streambridge_custom_gift_sound",
+      "streambridge_custom_gift_sound_name"
+    ].forEach((key) => localStorage.removeItem(key));
+  };
   const showGiftAlert = ({
     username = "TikTok viewer",
     giftName = "TikTok Gift",
@@ -1936,12 +2268,91 @@ const homeCard = {
               </div>
             </fieldset>
 
-            <fieldset style={{ borderRadius: 14, border: `1px solid ${accentColor}66`, padding: 16 }}>
-              <legend><b>Gift alerts</b></legend>
+            <fieldset style={{
+              borderRadius: 18,
+              border: `1px solid ${accentColor}88`,
+              padding: 18,
+              background: "linear-gradient(145deg, rgba(20,30,55,.82), rgba(7,12,26,.92))",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,.08)"
+            }}>
+              <legend>
+                <b>Gift Sound Mixer</b>
+                <span style={{
+                  marginLeft: 8,
+                  color: "#facc15",
+                  fontSize: ".76rem"
+                }}>
+                  PRO
+                </span>
+              </legend>
 
-              <div style={{ display: "grid", gap: 14 }}>
-                <label style={{ display: "grid", gap: 8 }}>
-                  <b>Alert volume: {giftAlertVolume}%</b>
+              <div style={{ display: "grid", gap: 16 }}>
+                <label style={{ display: "grid", gap: 7 }}>
+                  <b>Alert sound</b>
+
+                  <select
+                    value={giftSoundPreset}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setGiftSoundPreset(value);
+                      localStorage.setItem(
+                        "streambridge_gift_sound_preset",
+                        value
+                      );
+                    }}
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: 11,
+                      border: "1px solid rgba(148,163,184,.35)",
+                      background: "#070d1b",
+                      color: "white",
+                      fontWeight: 800
+                    }}
+                  >
+                    <option value="neon">DavaBridge Neon</option>
+                    <option value="arcade">Arcade</option>
+                    <option value="magic">Magic</option>
+                    <option value="bass">Bass Drop</option>
+                    <option value="celebration">Celebration</option>
+                    <option
+                      value="custom"
+                      disabled={!customGiftSound}
+                    >
+                      Custom uploaded sound
+                    </option>
+                  </select>
+                </label>
+
+                <label style={{
+                  ...themedButtonStyle,
+                  display: "block",
+                  textAlign: "center"
+                }}>
+                  UPLOAD YOUR OWN MP3 / WAV
+
+                  <input
+                    type="file"
+                    accept=".mp3,.wav,audio/mpeg,audio/wav"
+                    onChange={onCustomGiftSoundChange}
+                    style={{ display: "none" }}
+                  />
+                </label>
+
+                <div style={{
+                  color: customGiftSoundName
+                    ? "#86efac"
+                    : "#94a3b8",
+                  fontSize: ".84rem",
+                  overflowWrap: "anywhere"
+                }}>
+                  {customGiftSoundName
+                    ? `Loaded: ${customGiftSoundName}`
+                    : "No custom sound uploaded. Maximum file size: 2 MB."}
+                </div>
+
+                <label style={{ display: "grid", gap: 7 }}>
+                  <b>Master volume: {giftAlertVolume}%</b>
+
                   <input
                     type="range"
                     min="0"
@@ -1949,48 +2360,180 @@ const homeCard = {
                     step="1"
                     value={giftAlertVolume}
                     onChange={(event) => {
-                      const nextVolume = Number(event.target.value);
-                      setGiftAlertVolume(nextVolume);
+                      const value = Number(event.target.value);
+                      setGiftAlertVolume(value);
                       localStorage.setItem(
                         "streambridge_gift_alert_volume",
-                        String(nextVolume)
+                        String(value)
                       );
                     }}
-                    style={{
-                      width: "100%",
-                      accentColor
-                    }}
+                    style={{ width: "100%", accentColor }}
                   />
                 </label>
 
+                <label style={{ display: "grid", gap: 7 }}>
+                  <b>Start position: {giftSoundStart.toFixed(1)} sec</b>
+
+                  <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    step="0.1"
+                    value={giftSoundStart}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setGiftSoundStart(value);
+                      localStorage.setItem(
+                        "streambridge_gift_sound_start",
+                        String(value)
+                      );
+                    }}
+                    style={{ width: "100%", accentColor }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: 7 }}>
+                  <b>Duration: {giftSoundDuration.toFixed(1)} sec</b>
+
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="10"
+                    step="0.1"
+                    value={giftSoundDuration}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setGiftSoundDuration(value);
+                      localStorage.setItem(
+                        "streambridge_gift_sound_duration",
+                        String(value)
+                      );
+                    }}
+                    style={{ width: "100%", accentColor }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: 7 }}>
+                  <b>Fade in: {giftSoundFadeIn.toFixed(1)} sec</b>
+
+                  <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.1"
+                    value={giftSoundFadeIn}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setGiftSoundFadeIn(value);
+                      localStorage.setItem(
+                        "streambridge_gift_sound_fade_in",
+                        String(value)
+                      );
+                    }}
+                    style={{ width: "100%", accentColor }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: 7 }}>
+                  <b>Fade out: {giftSoundFadeOut.toFixed(1)} sec</b>
+
+                  <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.1"
+                    value={giftSoundFadeOut}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setGiftSoundFadeOut(value);
+                      localStorage.setItem(
+                        "streambridge_gift_sound_fade_out",
+                        String(value)
+                      );
+                    }}
+                    style={{ width: "100%", accentColor }}
+                  />
+                </label>
+
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontWeight: 900
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={giftSoundMuted}
+                    onChange={(event) => {
+                      setGiftSoundMuted(event.target.checked);
+                      localStorage.setItem(
+                        "streambridge_gift_sound_muted",
+                        String(event.target.checked)
+                      );
+                    }}
+                  />
+
+                  Mute gift alert sounds
+                </label>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: 10
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => playGiftAlertSound()}
+                    style={secondaryButtonStyle}
+                  >
+                    PREVIEW SOUND
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLiveChat(true);
+
+                      window.setTimeout(() => {
+                        showGiftAlert({
+                          username: "DavaBridge Test",
+                          giftName: "Universe",
+                          count: 1,
+                          image: ""
+                        });
+                      }, 150);
+                    }}
+                    style={{
+                      ...themedButtonStyle,
+                      width: "100%"
+                    }}
+                  >
+                    TEST FULL GIFT ALERT
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowLiveChat(true);
-
-                    window.setTimeout(() => {
-                      showGiftAlert({
-                        username: "DavaBridge Test",
-                        giftName: "Universe",
-                        count: 1,
-                        image: ""
-                      });
-                    }, 150);
-                  }}
+                  onClick={resetGiftSoundMixer}
                   style={{
-                    ...themedButtonStyle,
-                    width: "100%"
+                    ...secondaryButtonStyle,
+                    borderColor: "rgba(248,113,113,.42)"
                   }}
                 >
-                  TEST GIFT ALERT
+                  RESET GIFT SOUND MIXER
                 </button>
 
-                <div style={{ color: "#94a3b8", fontSize: ".82rem", lineHeight: 1.5 }}>
-                  The test opens Combined Chat, plays the alert sound and displays a five-second animated gift. Set volume to 0% for silent alerts.
+                <div style={{
+                  color: "#94a3b8",
+                  fontSize: ".82rem",
+                  lineHeight: 1.5
+                }}>
+                  Preview Sound plays only the selected sound. Test Full
+                  Gift Alert opens Combined Chat and runs the complete
+                  five-second gift animation behind the chat messages.
                 </div>
               </div>
             </fieldset>
-
             <button type="button" onClick={openConnections} style={secondaryButtonStyle}>MANAGE PLATFORM CONNECTIONS</button>
           </div>
         </details>
@@ -1998,6 +2541,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
