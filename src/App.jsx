@@ -43,7 +43,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchViewers, youtubeViewers, facebookViewers, kickViewers, mixcloudViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchConnected, youtubeConnected, facebookConnected, kickConnected, mixcloudConnected, twitchViewers, youtubeViewers, facebookViewers, kickViewers, mixcloudViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -94,7 +94,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "6px 14px", marginTop: 7 }}>
             <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Twitch:</strong> {twitchStatus} | Viewers: {Number(twitchViewers || 0).toLocaleString()}</div>
             <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>YouTube:</strong> {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
-            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>TikTok:</strong> {tiktokStatus} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
+            <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>TikTok:</strong> {tiktokConnected ? tiktokStatus : "Not connected"} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
             <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Facebook:</strong> {facebookStatus} | Viewers: {Number(facebookViewers || 0).toLocaleString()}</div>
             <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Kick:</strong> {kickStatus} | Viewers: {Number(kickViewers || 0).toLocaleString()}</div>
             <div style={{ color: "#70f0a0", fontSize: ".76rem" }}><strong>Mixcloud:</strong> {mixcloudStatus} | Viewers: {Number(mixcloudViewers || 0).toLocaleString()}</div>
@@ -118,7 +118,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
             <option value="facebook">Facebook</option>
             <option value="kick">Kick</option>
             <option value="mixcloud">Mixcloud</option>
-            <option value="all">All Sendable Platforms</option>
+            <option value="all">Send to Everyone</option>
           </select>
           <label htmlFor="live-chat-message" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Live chat message</label><input ref={messageInputRef} id="live-chat-message" aria-label="Live chat message. Press Alt plus L to focus this box" maxLength={500} value={messageText} onChange={(event) => setMessageText(expandEmojiWords(cleanChatText(event.target.value)))} placeholder="Start typing... (try: fire)" style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#070a13", borderLeftColor: "#070a13", borderRightColor: "#526181", borderBottomColor: "#526181", background: "linear-gradient(180deg, #0b1122 0%, #182440 100%)", color: "white", fontSize: "1rem", boxShadow: "inset 0 5px 10px rgba(0,0,0,.78), inset 0 -1px 0 rgba(255,255,255,.1), 0 2px 0 rgba(255,255,255,.1)", outline: "none" }} />
           <button
@@ -1395,7 +1395,7 @@ const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} mixcloudViewers={mixcloudViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchConnected={twitchConnected} youtubeConnected={youtubeConnected} facebookConnected={facebookConnected} kickConnected={kickConnected} mixcloudConnected={mixcloudConnected} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} mixcloudViewers={mixcloudViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
   const startProCheckout = async () => {
   try {
@@ -1586,10 +1586,10 @@ const homeCard = {
 <section style={{ marginBottom: 22, padding: "22px", borderRadius: 20, textAlign: "center", border: `1px solid ${lighterAccent}88`, background: "rgba(124,58,237,.12)" }}>
           <div style={{ color: lighterAccent, fontWeight: 900 }}>DAVABRIDGE PRO</div>
           <h2>Unlock DavaBridge Pro</h2>
-          <p style={{ fontSize: "1.25rem", fontWeight: 900 }}>Â£4.99 / month</p>
+          <p style={{ fontSize: "1.25rem", fontWeight: 900 }}>£4.99 / month</p>
           <p>Upgrade to DavaBridge Pro and unlock premium DavaBridge features.</p>
           <button type="button" onClick={startProCheckout} style={{ ...themedButtonStyle, width: "100%", maxWidth: 360 }}>
-            UPGRADE TO PRO - Â£4.99/MONTH
+            UPGRADE TO PRO - £4.99/MONTH
           </button>
         </section>
         <details style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 18, background: "rgba(15,23,42,.66)", overflow: "hidden" }}>
@@ -1658,6 +1658,9 @@ const homeCard = {
     </main>
   );
 }
+
+
+
 
 
 
