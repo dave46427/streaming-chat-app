@@ -551,7 +551,11 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
 
   const [giftSoundDuration, setGiftSoundDuration] = useState(() => {
     const saved = Number(localStorage.getItem("streambridge_gift_sound_duration"));
-    return Number.isFinite(saved) ? Math.min(10, Math.max(0.5, saved)) : 7;
+    const duration = Number.isFinite(saved)
+      ? Math.min(10, Math.max(0.5, saved))
+      : 7;
+
+    return duration === 5 ? 7 : duration;
   });
 
   const [giftSoundFadeIn, setGiftSoundFadeIn] = useState(() => {
@@ -677,10 +681,9 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
           audioDuration - startPosition
         );
 
-        const playbackDuration = Math.min(
-          requestedDuration,
-          availableDuration
-        );
+        const playbackDuration = requestedDuration;
+
+        audio.loop = availableDuration < requestedDuration;
 
         const fadeIn = Math.min(
           requestedFadeIn,
@@ -2655,6 +2658,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
