@@ -1,0 +1,877 @@
+﻿===== LIVE CHAT =====
+  }, [messages, announceMessages]);
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if (event.altKey && event.key.toLowerCase() === "l") { event.preventDefault(); messageInputRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+  return (
+    <main style={{ minHeight: "100vh", background: highContrast ? "#000" : (theme === "light" ? "#eef2ff" : "#0b1020"), color: highContrast ? "#fff" : (theme === "light" ? "#111827" : "white"), padding: "clamp(8px, 1.5vw, 14px)", fontSize: largeText ? "125%" : "100%", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
+      <a href="#chat-messages" style={{ position: "absolute", left: 8, top: 8, padding: 8, background: "#fff", color: "#000", transform: "translateY(-150%)" }} onFocus={(e) => { e.currentTarget.style.transform = "translateY(0)"; }} onBlur={(e) => { e.currentTarget.style.transform = "translateY(-150%)"; }}>Skip to chat messages</a>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <button type="button" onClick={onBack} style={liveButtonStyle}>Back to Settings</button>
+        <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>DAVABRIDGE LIVE</div>
+        <div style={{ color: "#70f0a0", fontWeight: 700 }}>LIVE CHAT</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>Add chat background<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
+      </header>
+      <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
+        <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
+          <div style={{ fontSize: "1rem", fontWeight: 800 }}>Combined Chat</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 3 }}>{"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢"} Twitch: {twitchStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢"} YouTube: {youtubeStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢"} TikTok: {tiktokStatus}</div>
+<div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>{"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢"} Facebook: {facebookStatus}</div>
+<div style={{ color: "#67e8f9", fontSize: ".76rem", marginTop: 1 }}>
+  TikTok Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}
+</div>
+        </div>
+        <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Combined live chat messages" tabIndex="0" style={{ flex: 1, overflowY: "auto", padding: "clamp(8px, 1.5vw, 12px)", minHeight: 0, background: chatBackground ? `linear-gradient(rgba(11,16,32,.55), rgba(11,16,32,.55)), url(${chatBackground}) center / cover no-repeat` : "#111831" }}>
+          {messages.length === 0 ? <div style={{ color: "#aeb8d4", textAlign: "center", marginTop: 40 }}>Waiting for live messages...</div> : messages.map((msg, index) => (
+            <div key={msg.id ?? index} style={{ padding: "8px 11px", marginBottom: 7, background: chatBackground ? `${messageBackgroundColor}D9` : messageBackgroundColor, color: messageTextColor, borderRadius: 10, backdropFilter: chatBackground ? "blur(2px)" : "none", borderLeft: `4px solid ${msg.platform === "YouTube" ? youtubeMessageColor : msg.platform === "TikTok" ? tiktokMessageColor : twitchMessageColor}` }}>
+              <div style={{ fontSize: ".76rem", color: "#aeb8d4", marginBottom: 4 }}>{msg.platform ?? "Chat"} {"\u2022"} <strong style={{ color: messageTextColor }}>{msg.username ?? "Viewer"}</strong></div>
+              <div style={{ fontSize: ".98rem", overflowWrap: "anywhere" }}>{msg.text ?? ""}</div>
+            </div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+        <form onSubmit={(event) => { event.preventDefault(); onSend(); }} style={{ display: "flex", gap: 8, padding: "10px", borderTop: "3px solid #394968", background: "linear-gradient(180deg, #202b49 0%, #0d1428 72%, #080c18 100%)", flexWrap: "wrap", boxShadow: "inset 0 3px 0 rgba(255,255,255,.12), inset 0 -5px 12px rgba(0,0,0,.48), 0 -8px 18px rgba(0,0,0,.38)", position: "relative", zIndex: 2 }}>
+          <label htmlFor="send-target" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Send message to</label><select id="send-target" aria-label="Send message to platform" value={sendTarget} onChange={(event) => setSendTarget(event.target.value)} style={{ padding: "11px 13px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#080b15", borderLeftColor: "#080b15", borderRightColor: "#536181", borderBottomColor: "#536181", background: "linear-gradient(180deg, #10172b 0%, #1d2947 100%)", color: "white", fontWeight: 700, boxShadow: "inset 0 4px 8px rgba(0,0,0,.72), 0 2px 0 rgba(255,255,255,.12)" }}>
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="facebook">Facebook</option>
+            <option value="both">Twitch + YouTube</option>
+            <option value="all">All Sendable Platforms</option>
+          </select>
+          <label htmlFor="live-chat-message" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden" }}>Live chat message</label><input ref={messageInputRef} id="live-chat-message" aria-label="Live chat message. Press Alt plus L to focus this box" maxLength={500} value={messageText} onChange={(event) => setMessageText(expandEmojiWords(cleanChatText(event.target.value)))} placeholder="Start typing... (try: fire)" style={{ flex: "1 1 220px", padding: "12px 14px", borderRadius: 11, border: "2px solid #080c18", borderTopColor: "#070a13", borderLeftColor: "#070a13", borderRightColor: "#526181", borderBottomColor: "#526181", background: "linear-gradient(180deg, #0b1122 0%, #182440 100%)", color: "white", fontSize: "1rem", boxShadow: "inset 0 5px 10px rgba(0,0,0,.78), inset 0 -1px 0 rgba(255,255,255,.1), 0 2px 0 rgba(255,255,255,.1)", outline: "none" }} />
+          <button
+            type="submit"
+            disabled={!canSend}
+            style={{
+              ...liveButtonStyle,
+              background: canSend ? accentColor : "#4b5063",
+              cursor: canSend ? "pointer" : "not-allowed",
+            }}
+          >
+
+===== AGE AND SAFETY =====
+    };
+    const page = safetyContent[safetyPage];
+    return (
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", background: "#080c18", color: "white", fontFamily: "Arial, sans-serif" }}>
+        <section style={{ width: "min(760px, 100%)", background: "#111831", border: `1px solid ${accentColor}`, borderRadius: 22, padding: 28, boxShadow: "0 24px 70px rgba(0,0,0,.5)" }}>
+          <h1>{page.title}</h1>
+          {page.paragraphs.map((paragraph, index) => <p key={index} style={{ color: "#d7def2", lineHeight: 1.65 }}>{paragraph}</p>)}
+          <button type="button" onClick={() => setSafetyPage("")} style={{ ...liveButtonStyle, background: accentColor, marginTop: 12 }}>BACK</button>
+        </section>
+      </main>
+    );
+  }
+  if (!startupFinished) {
+    return <StartupScreen onContinue={() => setStartupFinished(true)} onSkipSetup={() => { localStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.setItem("streambridge_setup_complete", "true"); sessionStorage.removeItem("streambridge_setup_in_progress"); setStartupFinished(true); setSetupComplete(true); }} />;
+  }
+
+  if (!ageVerified) return (
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, boxSizing: "border-box", background: "radial-gradient(circle at 50% 10%, rgba(124,58,237,.28), transparent 34%), linear-gradient(145deg, #070912 0%, #0b1020 48%, #080b16 100%)", color: "white", fontFamily: "Arial, sans-serif" }}>
+      <section style={{ width: "min(540px, 100%)", textAlign: "center", background: "rgba(12,17,34,.94)", border: "1px solid rgba(167,139,250,.55)", borderRadius: 28, padding: "36px 30px", boxShadow: "0 0 35px rgba(124,58,237,.18), 0 28px 80px rgba(0,0,0,.55)", backdropFilter: "blur(16px)" }}>
+        <div style={{ width: 88, height: 88, margin: "0 auto 22px", display: "grid", placeItems: "center", borderRadius: "50%", background: "linear-gradient(135deg, rgba(124,58,237,.28), rgba(37,99,235,.22))", border: "2px solid #8b5cf6", boxShadow: "0 0 30px rgba(139,92,246,.4)", fontSize: "2rem", fontWeight: 900 }}>18+</div>
+        <p style={{ margin: "0 0 8px", color: "#a78bfa", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>DAVABRIDGE</p>
+        <h1 style={{ margin: "0 0 14px", fontSize: "clamp(1.8rem, 6vw, 2.5rem)", lineHeight: 1.12 }}>Age & Safety</h1>
+        <p style={{ color: "#cbd5e1", lineHeight: 1.65, margin: "0 auto 10px", maxWidth: 440 }}>DavaBridge is intended for adults aged 18 or over.</p>
+        <p style={{ color: "#94a3b8", lineHeight: 1.55, margin: "0 auto 26px", maxWidth: 440, fontSize: ".92rem" }}>Please confirm that you are 18 or older before continuing.</p>
+               <label style={{ display: "flex", gap: 12, alignItems: "flex-start", textAlign: "left", padding: "14px 16px", margin: "0 0 14px", borderRadius: 14, background: "rgba(255,255,255,.04)", border: "1px solid rgba(167,139,250,.28)", color: "#dbe4f3", lineHeight: 1.5, cursor: "pointer" }}>
+          <input type="checkbox" checked={ageAgreementChecked} onChange={(event) => setAgeAgreementChecked(event.target.checked)} style={{ marginTop: 4, width: 18, height: 18, accentColor: "#7c3aed", flex: "0 0 auto" }} />
+          <span>I confirm that I am 18 or over. I understand that DavaBridge is an 18+ service only, and I agree to the Terms of Use and Privacy Notice.</span>
+        </label>
+        <p style={{ color: "#94a3b8", lineHeight: 1.5, margin: "0 auto 14px", maxWidth: 440, fontSize: ".82rem" }}>By continuing, you confirm that you meet the 18+ age requirement.</p>
+        <button type="button" disabled={!ageAgreementChecked} onClick={() => { if (!ageAgreementChecked) return; localStorage.setItem("streambridge_age_verified", "true"); setAgeVerified(true); }} style={{ width: "100%", border: 0, borderRadius: 14, padding: "16px 18px", color: "white", fontSize: "1rem", fontWeight: 900, cursor: ageAgreementChecked ? "pointer" : "not-allowed", background: ageAgreementChecked ? "linear-gradient(135deg, #7c3aed, #2563eb)" : "#475569", opacity: ageAgreementChecked ? 1 : 0.6, boxShadow: ageAgreementChecked ? "0 10px 30px rgba(124,58,237,.35)" : "none" }}>I am 18 or over</button>
+        <button type="button" onClick={() => { window.location.href = "about:blank"; }} style={{ width: "100%", marginTop: 11, borderRadius: 14, padding: "14px 18px", color: "#cbd5e1", fontSize: ".95rem", fontWeight: 700, cursor: "pointer", background: "rgba(255,255,255,.04)", border: "1px solid rgba(148,163,184,.25)" }}>I am under 18</button>
+        <div style={{ height: 1, background: "rgba(148,163,184,.15)", margin: "26px 0 20px" }} />
+        <p style={{ color: "#64748b", fontSize: ".78rem", lineHeight: 1.5, margin: "0 0 16px" }}>Your 18+ confirmation is remembered on this device.</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
+          <button type="button" onClick={() => setSafetyPage("privacy")} style={{ border: 0, padding: 0, background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: ".82rem" }}>Privacy</button>
+          <button type="button" onClick={() => setSafetyPage("terms")} style={{ border: 0, padding: 0, background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: ".82rem" }}>Terms</button>
+          <button type="button" onClick={() => setSafetyPage("safety")} style={{ border: 0, padding: 0, background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: ".82rem" }}>Safety</button>
+        </div>
+      </section>
+    </main>
+  );
+  if (!setupComplete) {
+    const twitchAuthorised = Boolean(sessionStorage.getItem("twitch_access_token"));
+    const youtubeAuthorised = Boolean(sessionStorage.getItem("youtube_access_token"));
+
+
+===== CONNECTION SETUP =====
+      textAlign: "center",
+      fontWeight: 900,
+      color: connected ? "#86efac" : "#94a3b8",
+      border: connected ? "1px solid rgba(74,222,128,.65)" : "1px solid rgba(148,163,184,.3)",
+      background: connected ? "rgba(34,197,94,.14)" : "rgba(148,163,184,.08)"
+    });
+
+    return (
+      <main style={{ minHeight: "100vh", width: "100%", maxWidth: "none", margin: 0, padding: "24px 16px", boxSizing: "border-box", display: "grid", placeItems: "center", background: "radial-gradient(circle at 50% 0%, rgba(14,165,233,.20), transparent 34%), linear-gradient(145deg, #050914 0%, #081225 50%, #040712 100%)", color: "white", fontFamily: "Arial, sans-serif" }}>
+        <section style={{ width: "min(780px, 100%)", padding: "clamp(20px, 4vw, 36px)", borderRadius: 28, border: "1px solid rgba(34,211,238,.45)", background: "rgba(5,10,24,.95)", boxShadow: "0 0 45px rgba(34,211,238,.12), 0 30px 90px rgba(0,0,0,.58)", boxSizing: "border-box" }}>
+          <header style={{ display: "block", textAlign: "center", marginBottom: 26 }}>
+            <p style={{ margin: "0 0 8px", color: "#67e8f9", fontWeight: 900, letterSpacing: 3, fontSize: ".78rem" }}>DAVABRIDGE</p>
+            <h1 style={{ margin: "0 0 10px", fontSize: "clamp(2rem, 7vw, 3.2rem)", lineHeight: 1.05 }}>Connect Platforms</h1>
+            <p style={{ margin: "0 auto", maxWidth: 590, color: "#b8c5db", lineHeight: 1.6 }}>Connect the platforms you want DavaBridge to bring together. You can change connections later in Settings.</p>
+          </header>
+
+          <div style={{ display: "grid", gap: 14 }}>
+            <article style={platformCard}>
+              <div style={{ flex: "1 1 260px" }}>
+                <strong style={{ fontSize: "1.08rem" }}>Twitch</strong>
+                <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Send and receive Twitch chat</div>
+                {twitchAuthorised && !activeChannel && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <input type="text" aria-label="Twitch channel name" placeholder="Twitch channel name" value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} onKeyDown={(event) => event.key === "Enter" && chooseChannel()} style={{ flex: "1 1 200px", padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(148,163,184,.35)", background: "#070d1b", color: "white" }} />
+                    <button type="button" onClick={chooseChannel} style={connectionButton}>SAVE CHANNEL</button>
+                  </div>
+                )}
+                {twitchAuthorised && <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>{twitchStatus}</div>}
+              </div>
+              {twitchAuthorised ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectTwitch} style={connectionButton}>CONNECT</button>}
+            </article>
+
+            <article style={platformCard}>
+              <div><strong style={{ fontSize: "1.08rem" }}>YouTube</strong><div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Send and receive YouTube live chat</div></div>
+              {youtubeAuthorised ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectYouTube} style={connectionButton}>CONNECT</button>}
+            </article>
+
+            <article style={platformCard}>
+              <div style={{ flex: "1 1 260px" }}>
+                <strong style={{ fontSize: "1.08rem" }}>TikTok</strong>
+                <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Receive TikTok live messages</div>
+                {!tiktokConnected && <input type="text" aria-label="TikTok username" placeholder="TikTok username" value={tiktokUsername} onChange={(event) => setTiktokUsername(cleanChatText(event.target.value).replace(/^@/, ""))} style={{ width: "100%", maxWidth: 300, marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(148,163,184,.35)", background: "#070d1b", color: "white", boxSizing: "border-box" }} />}
+                <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>{tiktokStatus}</div>
+              </div>
+              {tiktokConnected ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectTikTok} style={connectionButton}>CONNECT</button>}
+            </article>
+
+            <article style={platformCard}>
+  <div>
+    <strong style={{ fontSize: "1.08rem" }}>Facebook Live / Meta</strong>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Connect Facebook Live</div>
+    <div style={{ color: "#94a3b8", fontSize: ".78rem", marginTop: 7 }}>{facebookStatus}</div>
+  </div>
+  {facebookConnected ? <div style={badge(true)}>CONNECTED</div> : <button type="button" onClick={connectFacebook} style={connectionButton}>CONNECT</button>}
+</article>
+
+<article style={platformCard}>
+  <div>
+    <strong style={{ fontSize: "1.08rem" }}>Kick</strong>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Planned chat connection</div>
+  </div>
+  <button type="button" style={connectionButton}>CONNECT</button>
+</article>
+
+<article style={platformCard}>
+  <div>
+    <strong style={{ fontSize: "1.08rem" }}>Mixcloud</strong>
+    <div style={{ color: "#94a3b8", fontSize: ".86rem", marginTop: 5 }}>Connect your Mixcloud account</div>
+  </div>
+  <button type="button" onClick={connectMixcloud} style={connectionButton}>CONNECT</button>
+</article>
+          </div>
+
+          <div style={{ display: "grid", gap: 11, marginTop: 24 }}>
+            <button type="button" onClick={() => completeSetup(true)} style={{ ...themedButtonStyle, width: "100%", padding: "16px 20px", fontSize: "1rem", background: "linear-gradient(180deg, #3b82f6 0%, #0865e8 100%)", border: "1px solid #60a5fa" }}>CONTINUE TO COMBINED CHAT</button>
+            <button type="button" onClick={() => completeSetup(false)} style={{ width: "100%", border: "1px solid rgba(148,163,184,.28)", borderRadius: 14, padding: "13px 18px", color: "#cbd5e1", background: "rgba(15,23,42,.7)", fontWeight: 800, cursor: "pointer" }}>SKIP SETUP FOR NOW</button>
+          </div>
+          <p style={{ margin: "18px 0 0", color: "#64748b", textAlign: "center", fontSize: ".78rem" }}>Connected platforms and ordinary preferences are remembered on this device.</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (showLiveChat) return <LiveChatScreen messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+
+  const connectAll = () => {
+    const twitchToken = sessionStorage.getItem("twitch_access_token");
+    const youtubeToken = sessionStorage.getItem("youtube_access_token");
+    const savedTikTokUsername = localStorage.getItem("tiktok_username") || "";
+const facebookConfigured =
+
+===== HOME AND SETTINGS =====
+            src="/davabridge-icon.png"
+            alt="DavaBridge"
+            style={{ width: 96, height: 96, objectFit: "contain", borderRadius: 22, marginBottom: 16 }}
+          />
+          <p style={{ margin: "0 0 10px", color: lighterAccent, fontWeight: 900, letterSpacing: 4, fontSize: ".78rem" }}>
+            DAVABRIDGE
+          </p>
+          <h1 style={{ margin: "0 0 12px", fontSize: "clamp(2.25rem, 8vw, 4.5rem)", lineHeight: 1.02 }}>
+            All your chats. One place.
+          </h1>
+          <p style={{ margin: "0 auto", maxWidth: 620, color: theme === "light" ? "#475569" : "#b8c5db", lineHeight: 1.65, fontSize: "1.05rem" }}>
+            {t("homeSubtitle")}
+          </p>
+        </header>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 18 }}>
+          <button type="button" onClick={connectAll} style={{ ...themedButtonStyle, width: "100%", padding: "17px 20px", fontSize: "1rem" }}>
+            {t("connectAll")}
+          </button>
+          <button type="button" onClick={() => setShowLiveChat(true)} style={secondaryButtonStyle}>
+            {t("combinedChat")}
+          </button>
+        </div>
+
+        <div role="status" aria-live="polite" style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
+          marginBottom: 22,
+          color: "#94a3b8",
+          fontSize: ".86rem",
+        }}>
+          <span>{connectedCount} of 4 current chat connections ready</span>
+<span aria-hidden="true">&bull;</span>
+<span>Twitch: {twitchConnected ? t("connected") : t("notConnected")}</span>
+<span aria-hidden="true">&bull;</span>
+<span>YouTube: {youtubeConnected ? t("connected") : t("notConnected")}</span>
+<span aria-hidden="true">&bull;</span>
+<span>TikTok: {tiktokConnected ? t("connected") : t("notConnected")}</span>
+<span aria-hidden="true">&bull;</span>
+<span>Facebook: {facebookConnected ? t("connected") : t("notConnected")}</span>
+</div>
+
+        <details style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 18, background: "rgba(15,23,42,.66)", overflow: "hidden" }}>
+          <summary style={{ padding: "17px 20px", cursor: "pointer", fontWeight: 900, listStylePosition: "inside" }}>
+            {t("settingsAppearance")}
+          </summary>
+          <div style={{ padding: "0 20px 22px", display: "grid", gap: 18 }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+              <label>
+                <b>{t("language")} </b>
+                <select
+                  value={languageMode}
+                  onChange={(event) => changeLanguage(event.target.value)}
+                >
+                  <option value="auto">{t("automatic")}</option>
+                  {Object.entries(supportedLanguages).map(([code, name]) => (
+                    <option key={code} value={code}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label><b>Theme </b>
+                <select value={theme} onChange={(event) => changeTheme(event.target.value)}>
+                  <option value="dark">Dark</option>
+                  <option value="purple">Neon Purple</option>
+                  <option value="blue">Electric Blue</option>
+                  <option value="fire">Red / Orange</option>
+                  <option value="green">Cyber Green</option>
+                  <option value="light">Light</option>
+                </select>
+              </label>
+              <label><b>Pick your colour </b>
+                <input type="color" value={accentColor} onChange={(event) => { setAccentColor(event.target.value); localStorage.setItem("streambridge_accent", event.target.value); }} />
+              </label>
+              <label style={{ ...themedButtonStyle, display: "inline-block" }}>
+                Add app background
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onAppBackgroundChange} style={{ display: "none" }} />
+              </label>
+              {appBackground && <button type="button" onClick={clearAppBackground} style={secondaryButtonStyle}>Remove app background</button>}
+            </div>
+
+            <fieldset style={{ borderRadius: 14, border: `1px solid ${accentColor}66`, padding: 16 }}>
+              <legend><b>Accessibility</b></legend>
+              <label><input type="checkbox" checked={largeText} onChange={(event) => { setLargeText(event.target.checked); localStorage.setItem("streambridge_large_text", String(event.target.checked)); }} /> Large text</label><br />
+              <label><input type="checkbox" checked={highContrast} onChange={(event) => { setHighContrast(event.target.checked); localStorage.setItem("streambridge_high_contrast", String(event.target.checked)); }} /> High contrast</label><br />
+              <label><input type="checkbox" checked={announceMessages} onChange={(event) => { setAnnounceMessages(event.target.checked); localStorage.setItem("streambridge_announce_messages", String(event.target.checked)); }} /> Read new chat messages aloud</label>
+            </fieldset>
+
+            <fieldset style={{ borderRadius: 14, border: `1px solid ${accentColor}66`, padding: 16 }}>
+              <legend><b>Chat colours</b></legend>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+                <label>Twitch <input type="color" value={twitchMessageColor} onChange={(event) => { setTwitchMessageColor(event.target.value); localStorage.setItem("streambridge_twitch_message_color", event.target.value); }} /></label>
+                <label>YouTube <input type="color" value={youtubeMessageColor} onChange={(event) => { setYoutubeMessageColor(event.target.value); localStorage.setItem("streambridge_youtube_message_color", event.target.value); }} /></label>
+                <label>TikTok <input type="color" value={tiktokMessageColor} onChange={(event) => { setTiktokMessageColor(event.target.value); localStorage.setItem("streambridge_tiktok_message_color", event.target.value); }} /></label>
+                <label>Message box <input type="color" value={messageBackgroundColor} onChange={(event) => { setMessageBackgroundColor(event.target.value); localStorage.setItem("streambridge_message_background_color", event.target.value); }} /></label>
+                <label>Message text <input type="color" value={messageTextColor} onChange={(event) => { setMessageTextColor(event.target.value); localStorage.setItem("streambridge_message_text_color", event.target.value); }} /></label>
+              </div>
+            </fieldset>
+
+            <button type="button" onClick={openConnections} style={secondaryButtonStyle}>MANAGE PLATFORM CONNECTIONS</button>
+          </div>
+        </details>
+      </section>
+    </main>
+  );
+}
+
+
+
+
+
+
+===== STARTUP SCREEN =====
+import React, { useEffect, useState } from "react";
+
+export default function StartupScreen({ onContinue, onSkipSetup }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setReady(true);
+    }, 6500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const continueToApp = () => {
+    if (typeof onContinue === "function") {
+      onContinue();
+    }
+  };
+
+  const skipSetup = () => {
+    if (typeof onSkipSetup === "function") {
+      onSkipSetup();
+    }
+  };
+
+  return (
+    <main className="sb-startup">
+      <style>{`
+        html,
+        body,
+        #root {
+          position: fixed !important;
+          inset: 0 !important;
+          width: 100vw !important;
+          max-width: none !important;
+          min-width: 100vw !important;
+          height: 100vh !important;
+          min-height: 100vh !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        .sb-startup {
+          position: fixed !important;
+          inset: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden;
+          background: #01040d;
+          color: white;
+          font-family: Arial, Helvetica, sans-serif;
+          z-index: 99999;
+        }
+
+        .sb-scene {
+          position: absolute;
+          inset: 0;
+          width: 100vw;
+          height: 100vh;
+          overflow: hidden;
+          background-image: url("/streambridge-welcome-new.png");
+          background-position: center center;
+          background-repeat: no-repeat;
+          background-size: contain;
+          background-color: #01040d;
+          isolation: isolate;
+        }
+
+        .sb-darkness {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          pointer-events: none;
+          background: linear-gradient(
+            rgba(0, 3, 14, 0.78),
+            rgba(0, 5, 18, 0.67)
+          );
+          animation: sbDarknessOff 5.6s ease-in-out forwards;
+        }
+
+        @keyframes sbDarknessOff {
+          0% { opacity: 1; }
+          30% { opacity: 0.78; }
+          65% { opacity: 0.38; }
+          100% { opacity: 0; }
+        }
+
+        .sb-city-light {
+          position: absolute;
+          inset: 0;
+          z-index: 3;
+          pointer-events: none;
+          background: linear-gradient(
+            90deg,
+            rgba(0, 170, 255, 0.05) 0%,
+            rgba(0, 225, 255, 0.13) 35%,
+            rgba(64, 100, 255, 0.12) 65%,
+            rgba(181, 48, 255, 0.09) 100%
+          );
+          mix-blend-mode: screen;
+          opacity: 0;
+          animation: sbCityOn 5.4s ease-in-out forwards;
+        }
+
+        @keyframes sbCityOn {
+          0% { opacity: 0; }
+          30% { opacity: 0.2; }
+          65% { opacity: 0.55; }
+          100% { opacity: 0.8; }
+        }
+
+        .sb-bridge-light {
+          position: absolute;
+          z-index: 4;
+          left: 0;
+          right: 0;
+          bottom: 24%;
+          height: 26%;
+          pointer-events: none;
+          opacity: 0;
+
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(0, 213, 255, 0.22) 12%,
+            rgba(56, 220, 255, 0.34) 30%,
+            rgba(61, 139, 255, 0.34) 55%,
+            rgba(155, 74, 255, 0.25) 80%,
+            transparent 100%
+          );
+
+          filter:
+            blur(16px)
+            drop-shadow(0 0 14px rgba(0, 225, 255, 0.55));
+
+          transform: scaleX(0);
+          transform-origin: left center;
+
+          animation:
+            sbBridgeConnect
+            5.2s
+            ease-in-out
+            0.5s
+            forwards;
+        }
+
+        @keyframes sbBridgeConnect {
+          0% {
+            opacity: 0;
+            transform: scaleX(0);
+          }
+
+          15% {
+            opacity: 0.35;
+          }
+
+          65% {
+            opacity: 0.75;
+          }
+
+          100% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+        }
+
+        .sb-connected {
+          position: absolute;
+          z-index: 5;
+          left: 0;
+          right: 0;
+          bottom: 25%;
+          height: 22%;
+          pointer-events: none;
+
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(0, 229, 255, 0.14),
+            rgba(81, 154, 255, 0.18),
+            rgba(171, 70, 255, 0.12),
+            transparent
+          );
+
+          filter: blur(12px);
+          opacity: 0;
+
+          animation:
+            sbConnectedOn
+            1.2s
+            ease
+            5.1s
+            forwards;
+        }
+
+        @keyframes sbConnectedOn {
+          to {
+            opacity: 1;
+          }
+        }
+
+        .sb-brand {
+          position: absolute;
+          z-index: 15;
+          left: 50%;
+          top: 47%;
+
+          transform:
+            translate(-50%, -50%)
+            scale(0.88);
+
+          text-align: center;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+
+          animation:
+            sbBrandAppears
+            2.2s
+            ease-out
+            2.6s
+            forwards;
+        }
+
+        .sb-brand-title {
+          margin: 0;
+          display: inline-block;
+
+          font-size: clamp(42px, 7vw, 100px);
+          font-weight: 900;
+          letter-spacing: clamp(3px, 0.6vw, 10px);
+          line-height: 1;
+          text-transform: uppercase;
+
+          color: transparent;
+          -webkit-text-fill-color: transparent;
+
+          /*
+            DAVABRIDGE stays blue normally.
+
+            The narrow coloured area moves across the word:
+            Facebook blue
+            Kick green
+            YouTube red
+            Mixcloud blue
+            Twitch purple
+          */
+          background-image: linear-gradient(
+            90deg,
+
+            #4eb5e8 0%,
+            #4eb5e8 34%,
+
+            #1877f2 40%,
+            #53fc18 43%,
+            #ff0000 46%,
+            #168eea 49%,
+            #9146ff 52%,
+
+            #4eb5e8 58%,
+            #4eb5e8 100%
+          );
+
+          background-size: 400% 100%;
+          background-position: 0% 50%;
+
+          -webkit-background-clip: text;
+          background-clip: text;
+
+          animation:
+            sbPlatformSweep
+            9s
+            ease-in-out
+            4.5s
+            infinite;
+
+          filter:
+            drop-shadow(1px 1px 0 #397da7)
+            drop-shadow(2px 2px 0 #286487)
+            drop-shadow(3px 3px 0 #1c4c70)
+            drop-shadow(4px 4px 0 #123652)
+            drop-shadow(5px 5px 0 #0a2038)
+            drop-shadow(8px 10px 7px rgba(0, 0, 0, 0.7))
+            drop-shadow(0 0 8px rgba(34, 211, 238, 0.45))
+            drop-shadow(0 0 18px rgba(37, 99, 235, 0.28));
+        }
+
+        @keyframes sbPlatformSweep { 0% { background-position: 100% 50%; } 5% { background-position: 100% 50%; } 90% { background-position: 0% 50%; } 100% { background-position: 0% 50%; } }
+
+          15% {
+            background-position: 0% 50%;
+          }
+
+          70% {
+            background-position: 0% 50%;
+          }
+
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+
+        .sb-tagline {
+          margin: 12px 0 0;
+          color: #dffaff;
+
+          font-size: clamp(12px, 1.4vw, 20px);
+          font-weight: 700;
+          letter-spacing: 2px;
+          line-height: 1.4;
+
+          text-shadow:
+            0 0 6px #22d3ee,
+            0 0 14px rgba(34, 211, 238, 0.7),
+            0 0 22px rgba(139, 92, 246, 0.55);
+        }
+
+        .sb-brand-line {
+          width: 75%;
+          height: 3px;
+          margin: 17px auto 0;
+          border-radius: 50%;
+
+          background: linear-gradient(
+            90deg,
+            transparent,
+            #22d3ee,
+            #ffffff,
+            #8b5cf6,
+            transparent
+          );
+
+          box-shadow:
+            0 0 10px #22d3ee,
+            0 0 20px #6366f1,
+            0 0 30px #8b5cf6;
+        }
+
+        @keyframes sbBrandAppears {
+          0% {
+            opacity: 0;
+
+            transform:
+              translate(-50%, -45%)
+              scale(0.88);
+
+            filter: blur(8px);
+          }
+
+          55% {
+            opacity: 1;
+            filter: blur(0);
+          }
+
+          100% {
+            opacity: 1;
+
+            transform:
+              translate(-50%, -50%)
+              scale(1);
+
+            filter: blur(0);
+          }
+        }
+
+        .sb-actions {
+          position: absolute;
+          z-index: 20;
+          left: 50%;
+          bottom: 5%;
+
+          transform: translateX(-50%);
+
+          width: min(330px, calc(100vw - 32px));
+
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+
+          opacity: 0;
+          pointer-events: none;
+
+          transition:
+            opacity 0.6s ease,
+            transform 0.6s ease;
+        }
+
+        .sb-actions.visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .sb-continue,
+        .sb-skip {
+          width: 100%;
+          border-radius: 14px;
+          cursor: pointer;
+          font-weight: 800;
+          letter-spacing: 0.8px;
+        }
+
+        .sb-continue {
+          padding: 14px 30px;
+
+          border:
+            1px solid
+            rgba(91, 235, 255, 0.9);
+
+          background: rgba(2, 9, 24, 0.84);
+
+          color: #67e8f9;
+          font-size: 18px;
+
+          box-shadow:
+            0 0 12px rgba(34, 211, 238, 0.35),
+            inset 0 0 10px rgba(34, 211, 238, 0.08);
+        }
+
+        .sb-continue:hover {
+          background: rgba(7, 55, 88, 0.95);
+
+          box-shadow:
+            0 0 15px rgba(34, 211, 238, 0.75),
+            0 0 30px rgba(91, 79, 255, 0.3);
+        }
+
+        .sb-skip {
+          padding: 11px 20px;
+
+          border:
+            1px solid
+            rgba(148, 163, 184, 0.4);
+
+          background: rgba(2, 9, 24, 0.7);
+
+          color: #cbd5e1;
+          font-size: 13px;
+        }
+
+        .sb-skip:hover {
+          color: #ffffff;
+
+          border-color:
+            rgba(103, 232, 249, 0.75);
+
+          background:
+            rgba(15, 23, 42, 0.9);
+        }
+
+        .sb-continue:focus-visible,
+        .sb-skip:focus-visible {
+          outline:
+            3px solid #67e8f9;
+
+          outline-offset: 4px;
+        }
+
+        @media (max-width: 700px) {
+          .sb-scene {
+            background-position: center center;
+          }
+
+          .sb-brand {
+            top: 44%;
+            width: calc(100vw - 30px);
+            white-space: normal;
+          }
+
+          .sb-brand-title {
+            font-size: clamp(30px, 10vw, 54px);
+            letter-spacing: 3px;
+          }
+
+          .sb-tagline {
+            font-size: clamp(11px, 3.5vw, 16px);
+            letter-spacing: 1px;
+          }
+
+          .sb-actions {
+            bottom: 4%;
+          }
+
+          .sb-continue {
+            padding: 12px 24px;
+            font-size: 16px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .sb-darkness,
+          .sb-city-light,
+          .sb-bridge-light,
+          .sb-connected,
+          .sb-brand {
+            animation-duration: 0.01ms !important;
+            animation-delay: 0s !important;
+          }
+
+          .sb-brand-title {
+            animation: none !important;
+            background-image: none;
+            color: #4eb5e8;
+            -webkit-text-fill-color: #4eb5e8;
+          }
+        }
+      `}</style>
+
+      <section
+        className="sb-scene"
+        aria-label="DavaBridge startup"
+      >
+        <div className="sb-darkness" />
+        <div className="sb-city-light" />
+        <div className="sb-bridge-light" />
+        <div className="sb-connected" />
+
+        <div
+          className="sb-brand"
+          aria-label="DavaBridge"
+        >
+          <h1 className="sb-brand-title">
+            DAVABRIDGE
+          </h1>
+
+          <p className="sb-tagline">
+            Connect your platforms. Bring your chats together.
+          </p>
+
+          <div className="sb-brand-line" />
+        </div>
+
+        <div
+          className={`sb-actions ${ready ? "visible" : ""}`}
+        >
+          <button
+            type="button"
+            className="sb-continue"
+            onClick={continueToApp}
+          >
+            CONTINUE
+          </button>
+
+          <button
+            type="button"
+            className="sb-skip"
+            onClick={skipSetup}
+          >
+            SKIP SETUP FOR NOW
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+
