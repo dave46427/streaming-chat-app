@@ -43,7 +43,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchViewers, youtubeViewers, facebookViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchViewers, youtubeViewers, facebookViewers, kickViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -95,7 +95,7 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>YouTube: {youtubeStatus} | Viewers: {Number(youtubeViewers || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>TikTok: {tiktokStatus} | Viewers: {Number(tiktokViewers || 0).toLocaleString()} | Likes: {Number(tiktokLikes || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Facebook: {facebookStatus} | Viewers: {Number(facebookViewers || 0).toLocaleString()}</div>
-          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Kick: {kickStatus}</div>
+          <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Kick: {kickStatus} | Viewers: {Number(kickViewers || 0).toLocaleString()}</div>
           <div style={{ color: "#70f0a0", fontSize: ".76rem", marginTop: 1 }}>Mixcloud: {mixcloudStatus}</div>
 
         </div>
@@ -258,6 +258,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
   const [kickConnected, setKickConnected] = useState(false);
   const [kickStatus, setKickStatus] = useState("Not connected");
   const [kickUser, setKickUser] = useState("");
+  const [kickViewers, setKickViewers] = useState(0);
 
   const [messages, setMessages] = useState([]); const [chatInput, setChatInput] = useState(""); const [sendTarget, setSendTarget] = useState("twitch"); const [platforms, setPlatforms] = useState(defaults); const [live, setLive] = useState(false); const [showLiveChat, setShowLiveChat] = useState(false);
   const tiktokSocketRef = useRef(null); const socketRef = useRef(null); const reconnectTimerRef = useRef(null); const reconnectUrlRef = useRef(null); const reconnectingSocketRef = useRef(null); const youtubePollTimerRef = useRef(null); const youtubeNextPageTokenRef = useRef("");
@@ -1022,6 +1023,64 @@ if (data.type === "tiktok_gift") {
       if (timer) window.clearTimeout(timer);
     };
   }, [twitchConnected, twitchUser?.broadcaster_user_id]);
+  useEffect(() => {
+    if (!kickConnected) {
+      setKickViewers(0);
+      return;
+    }
+
+    let cancelled = false;
+    let timer = null;
+
+    const loadKickViewers = async () => {
+      try {
+        const response = await fetch("/api/kick/status", {
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.ok === false) {
+          throw new Error(
+            data.error ||
+            data.details ||
+            `Kick viewer request failed: ${response.status}`
+          );
+        }
+
+        if (!cancelled) {
+          const viewers = Number(data.viewers || 0);
+
+          setKickViewers(
+            Number.isFinite(viewers) && viewers >= 0
+              ? viewers
+              : 0
+          );
+        }
+      } catch (error) {
+        console.warn("Kick viewer count error:", error);
+
+        if (!cancelled) {
+          setKickViewers(0);
+        }
+      }
+
+      if (!cancelled) {
+        timer = window.setTimeout(loadKickViewers, 30000);
+      }
+    };
+
+    loadKickViewers();
+
+    return () => {
+      cancelled = true;
+
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [kickConnected]);
+
 const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("twitch_access_token"); if (!text || !token || !twitchUser?.broadcaster_user_id) throw new Error("Twitch is not ready to send."); const response = await fetch("https://api.twitch.tv/helix/chat/messages", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Client-Id": TWITCH_CLIENT_ID, "Content-Type": "application/json" }, body: JSON.stringify({ broadcaster_id: twitchUser.broadcaster_user_id, sender_id: twitchUser.user_id, message: text }) }); const result = await response.json(); if (!response.ok || !result.data?.[0]?.is_sent) throw new Error(result.data?.[0]?.drop_reason?.message || "Twitch message was not sent"); };
   const sendYouTubeMessage = async (textOverride) => { const text = (textOverride ?? chatInput).trim(); const token = sessionStorage.getItem("youtube_access_token"); if (!text || !token || !youtubeLiveChatId) throw new Error("YouTube is not ready to send."); const response = await fetch(`${YOUTUBE_API}/liveChat/messages?part=snippet`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ snippet: { liveChatId: youtubeLiveChatId, type: "textMessageEvent", textMessageDetails: { messageText: text } } }) }); if (!response.ok) { const details = await response.text(); throw new Error(details || "YouTube message was not sent"); } };
   const sendFacebookMessage = async (textOverride) => {
@@ -1333,7 +1392,7 @@ const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
   const startProCheckout = async () => {
   try {
@@ -1596,6 +1655,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 

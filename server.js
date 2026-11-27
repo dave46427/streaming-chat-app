@@ -1122,7 +1122,62 @@ app.get("/api/kick/status", async (request, response) => {
   try {
     const profile = await getKickProfile(kickConnection.accessToken);
     kickConnection = { ...kickConnection, connected: true, userId: profile.id, userName: profile.name, error: "" };
-    return response.json({ ok: true, ...publicKickConnection() });
+
+    let viewers = 0;
+
+    try {
+      if (profile.id) {
+        const livestreamUrl = new URL(
+          "https://api.kick.com/public/v1/livestreams"
+        );
+
+        livestreamUrl.searchParams.append(
+          "broadcaster_user_id",
+          String(profile.id)
+        );
+
+        const livestreamData = await readKickJson(
+          livestreamUrl.toString(),
+          {
+            headers: {
+              Authorization: `Bearer ${kickConnection.accessToken}`,
+              Accept: "application/json",
+            },
+          }
+        );
+
+        const livestreams = Array.isArray(livestreamData?.data)
+          ? livestreamData.data
+          : [];
+
+        const livestream = livestreams.find(
+          (item) =>
+            String(item?.broadcaster_user_id || "") ===
+            String(profile.id)
+        ) || livestreams[0];
+
+        viewers = Number(livestream?.viewer_count || 0);
+
+        if (!Number.isFinite(viewers) || viewers < 0) {
+          viewers = 0;
+        }
+      }
+    } catch (viewerError) {
+      console.warn(
+        "Kick viewer count unavailable:",
+        viewerError instanceof Error
+          ? viewerError.message
+          : viewerError
+      );
+
+      viewers = 0;
+    }
+
+    return response.json({
+      ok: true,
+      ...publicKickConnection(),
+      viewers,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "The saved Kick connection could not be validated.";
     kickConnection = { connected: false, accessToken: "", refreshToken: "", expiresAt: 0, userId: "", userName: "", connectedAt: "", scopes: [], error: "Kick needs reconnecting." };
@@ -1483,6 +1538,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
 
 
