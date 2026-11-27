@@ -1127,7 +1127,7 @@ async function connectTikTok(socket, usernameValue) {
 
   const connection = new TikTokLiveConnection(username, {
     processInitialData: false,
-    enableExtendedGiftInfo: false,
+    enableExtendedGiftInfo: true,
   });
 
   tiktokConnection = connection;
@@ -1193,11 +1193,29 @@ async function connectTikTok(socket, usernameValue) {
 
   connection.on(WebcastEvent.GIFT, (data) => {
     if (tiktokConnection !== connection) return;
+
+    const isStreakGift = Number(data?.gift?.type ?? data?.giftDetails?.type ?? 0) === 1;
+    const repeatEnded = Number(data?.repeatEnd ?? 0) === 1;
+    if (isStreakGift && !repeatEnded) return;
+
+    const giftName = repairMojibake(
+      data?.gift?.name ||
+      data?.giftDetails?.giftName ||
+      data?.extendedGiftInfo?.name ||
+      data?.giftName
+    ) || "TikTok gift";
+
     broadcastJson({
       type: "tiktok_gift",
-      username: safeUsername(data?.user?.displayId || data?.user?.uniqueId || data?.user?.nickname || data?.user?.userId, "TikTok viewer"),
-      giftName: repairMojibake(data?.giftDetails?.giftName || data?.giftName) || "TikTok gift",
-      count: Number(data?.repeatCount || data?.repeatEnd || 1),
+      username: safeUsername(
+        data?.user?.displayId ||
+        data?.user?.uniqueId ||
+        data?.user?.nickname ||
+        data?.user?.userId,
+        "TikTok viewer"
+      ),
+      giftName,
+      count: Math.max(1, Number(data?.repeatCount ?? 1)),
     });
   });
 

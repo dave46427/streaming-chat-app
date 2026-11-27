@@ -443,8 +443,8 @@ if (data.type === "tiktok_follow") {
     {
       id: `tiktok-follow-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
-      username: cleanChatText(data.username || "TikTok viewer"),
-      text: "?? followed the LIVE",
+      username: cleanChatText(data.username || "TikTok viewer").slice(0, 80),
+      text: "Followed the LIVE",
     },
   ].slice(-100));
 }
@@ -454,48 +454,41 @@ if (data.type === "tiktok_join") {
     {
       id: `tiktok-join-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
-      username: cleanChatText(data.username || "TikTok viewer"),
-      text: "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¹Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹ joined the LIVE",
+      username: cleanChatText(data.username || "TikTok viewer").slice(0, 80),
+      text: "Joined the LIVE",
     },
   ].slice(-100));
 }
 if (data.type === "tiktok_like") {
-  setTiktokLikes((current) => Math.max(current, Number(data.total || 0)));
+  const likeCount = Math.max(0, Number(data.count || 0));
+  const likeTotal = Math.max(0, Number(data.total || 0));
+  setTiktokLikes((current) => Math.max(current, likeTotal));
+  if (likeCount > 0) {
+    setMessages((current) => [
+      ...current,
+      {
+        id: `tiktok-like-${Date.now()}-${Math.random()}`,
+        platform: "TikTok",
+        username: cleanChatText(data.username || "TikTok viewer").slice(0, 80),
+        text: `Sent ${likeCount.toLocaleString()} like${likeCount === 1 ? "" : "s"}. Total: ${likeTotal.toLocaleString()}`,
+      },
+    ].slice(-100));
+  }
+}
+if (data.type === "tiktok_gift") {
+  const giftUsername = cleanChatText(data.username || "TikTok viewer").slice(0, 80);
+  const giftName = cleanChatText(data.giftName || "TikTok gift").slice(0, 100);
+  const giftCount = Math.max(1, Number(data.count || 1));
   setMessages((current) => [
     ...current,
     {
-      id: `tiktok-like-${Date.now()}-${Math.random()}`,
+      id: `tiktok-gift-${Date.now()}-${Math.random()}`,
       platform: "TikTok",
-      username: cleanChatText(data.username || "TikTok viewer"),
-      text: `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â sent ${Number(data.count || 0)} like${Number(data.count || 0) === 1 ? "" : "s"} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Total ${Number(data.total || 0)}`,
+      username: giftUsername,
+      text: `Sent ${giftName} x${giftCount.toLocaleString()}`,
     },
   ].slice(-100));
 }
-
-          if (data.type === "tiktok_gift") {
-            const giftUsername = cleanChatText(
-              data.username || "TikTok viewer"
-            ).slice(0, 80);
-
-            const giftName = cleanChatText(
-              data.giftName || "TikTok gift"
-            ).slice(0, 100);
-
-            const giftCount = Math.max(
-              1,
-              Number(data.count || 1)
-            );
-
-            setMessages((current) => [
-              ...current,
-              {
-                id: `tiktok-gift-${Date.now()}-${Math.random()}`,
-                platform: "TikTok",
-                username: giftUsername,
-                text: `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â sent ${giftName} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â${giftCount}`,
-              },
-            ].slice(-100));
-          }
           if (data.type === "facebook_status") {
             setFacebookConnected(Boolean(data.connected));
             setFacebookStatus(data.status || (data.connected ? "Facebook connected" : "Facebook not connected"));
