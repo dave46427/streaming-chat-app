@@ -43,7 +43,7 @@ const liveButtonStyle = {
   transition: "transform .12s ease, box-shadow .12s ease, filter .12s ease",
 };
 
-function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchConnected, youtubeConnected, facebookConnected, kickConnected, mixcloudConnected, twitchViewers, youtubeViewers, facebookViewers, kickViewers, mixcloudViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
+function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSend, canSend, twitchStatus, youtubeStatus, tiktokStatus, facebookStatus, kickStatus, mixcloudStatus, twitchConnected, youtubeConnected, facebookConnected, kickConnected, mixcloudConnected, twitchViewers, youtubeViewers, facebookViewers, kickViewers, mixcloudViewers, tiktokViewers, tiktokLikes, sendTarget, tiktokConnected, setSendTarget, accentColor, theme, largeText, highContrast, announceMessages, chatBackground, onChatBackgroundChange, onClearChatBackground, twitchMessageColor, youtubeMessageColor, tiktokMessageColor, messageBackgroundColor, messageTextColor }) {
   const chatEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const lastAnnouncedMessageRef = useRef(null);
@@ -86,7 +86,32 @@ function LiveChatScreen({ t, messages, onBack, messageText, setMessageText, onSe
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <button type="button" onClick={onBack} style={liveButtonStyle}>{lt("backToSettings")}</button>
         <div style={{ fontWeight: 800, fontSize: "1.15rem" }}>DAVABRIDGE LIVE</div>
-        <div style={{ color: "#70f0a0", fontWeight: 700 }}>{lt("liveChat")}</div><label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>{lt("addChatBackground")}<input aria-label="Add a background image to Live Chat" type="file" accept="image/png,image/jpeg,image/webp" onChange={onChatBackgroundChange} style={{ display: "none" }} /></label>
+        <div style={{ color: "#70f0a0", fontWeight: 700 }}>{lt("liveChat")}</div>
+<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+  <label style={{ ...liveButtonStyle, background: accentColor, display: "inline-block" }}>
+    {lt("addChatBackground")}
+    <input
+      aria-label="Add a background image to Live Chat"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      onChange={onChatBackgroundChange}
+      style={{ display: "none" }}
+    />
+  </label>
+
+  {chatBackground && (
+    <button
+      type="button"
+      onClick={onClearChatBackground}
+      style={{
+        ...liveButtonStyle,
+        background: "linear-gradient(180deg, #dc2626 0%, #991b1b 100%)"
+      }}
+    >
+      CLEAR BACKGROUND
+    </button>
+  )}
+</div>
       </header>
       <section style={{ background: "linear-gradient(145deg, #182244 0%, #111831 48%, #090e1d 100%)", border: "3px solid #344264", borderTopColor: "#7182ad", borderLeftColor: "#56698f", borderRightColor: "#11172a", borderBottomColor: "#080c16", borderRadius: 20, height: "calc(100dvh - 82px)", minHeight: 520, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 18px rgba(0,0,0,.35), 0 12px 0 #050811, 0 22px 38px rgba(0,0,0,.62)" }}>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ padding: "9px 12px", borderBottom: "3px solid #080c18", background: "linear-gradient(180deg, #263354 0%, #151e39 100%)", boxShadow: "inset 0 2px 0 rgba(255,255,255,.14), 0 5px 12px rgba(0,0,0,.46)", position: "relative", zIndex: 2 }}>
@@ -220,6 +245,11 @@ export default function App() {
   const [messageBackgroundColor, setMessageBackgroundColor] = useState(() => localStorage.getItem("streambridge_message_background_color") || "#171f3c");
   const [messageTextColor, setMessageTextColor] = useState(() => localStorage.getItem("streambridge_message_text_color") || "#ffffff");
   const onChatBackgroundChange = (event) => { const file = event.target.files?.[0]; if (!file) return; if (!file.type.startsWith("image/") || file.size > 4 * 1024 * 1024) { alert("Choose a PNG, JPG or WebP background under 4 MB."); event.target.value = ""; return; } const reader = new FileReader(); reader.onload = () => { const value = String(reader.result || ""); setChatBackground(value); try { localStorage.setItem("streambridge_chat_background", value); } catch { alert("Background is too large to save. Try a smaller image."); } }; reader.readAsDataURL(file); event.target.value = ""; };
+  const clearChatBackground = () => {
+    setChatBackground("");
+    localStorage.removeItem("streambridge_chat_background");
+  };
+
   const onAppBackgroundChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1395,7 +1425,7 @@ const sendTwitchMessage = async (textOverride) => { const text = (textOverride ?
     );
   }
 
-  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchConnected={twitchConnected} youtubeConnected={youtubeConnected} facebookConnected={facebookConnected} kickConnected={kickConnected} mixcloudConnected={mixcloudConnected} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} mixcloudViewers={mixcloudViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
+  if (showLiveChat) return <LiveChatScreen t={t} messages={messages} onBack={() => setShowLiveChat(false)} messageText={chatInput} setMessageText={setChatInput} onSend={sendSelectedMessage} canSend={canSend} twitchStatus={twitchStatus} youtubeStatus={youtubeStatus} tiktokStatus={tiktokStatus} facebookStatus={facebookStatus} kickStatus={kickStatus} mixcloudStatus={mixcloudStatus} twitchConnected={twitchConnected} youtubeConnected={youtubeConnected} facebookConnected={facebookConnected} kickConnected={kickConnected} mixcloudConnected={mixcloudConnected} twitchViewers={twitchViewers} youtubeViewers={youtubeViewers} facebookViewers={facebookViewers} kickViewers={kickViewers} mixcloudViewers={mixcloudViewers} tiktokViewers={tiktokViewers} tiktokLikes={tiktokLikes} sendTarget={sendTarget} setSendTarget={setSendTarget} tiktokConnected={tiktokConnected} accentColor={accentColor} theme={theme} largeText={largeText} highContrast={highContrast} announceMessages={announceMessages} chatBackground={chatBackground} onChatBackgroundChange={onChatBackgroundChange} onClearChatBackground={clearChatBackground} twitchMessageColor={twitchMessageColor} youtubeMessageColor={youtubeMessageColor} tiktokMessageColor={tiktokMessageColor} messageBackgroundColor={messageBackgroundColor} messageTextColor={messageTextColor} />;
 
   const startProCheckout = async () => {
   try {
@@ -1658,6 +1688,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
