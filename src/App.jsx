@@ -21,6 +21,102 @@ const expandEmojiWords = (value) => String(value || "")
   .replace(/\bcool\b/gi, "\u{1F60E}");
 const cleanChatText = (value) => String(value || "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").slice(0, 500);
 
+const GIFT_SOUND_DATABASE = "davabridge-audio-assets";
+const GIFT_SOUND_STORE = "gift-sounds";
+const CUSTOM_GIFT_SOUND_KEY = "custom-gift-sound";
+
+const openGiftSoundDatabase = () => new Promise((resolve, reject) => {
+  const request = indexedDB.open(GIFT_SOUND_DATABASE, 1);
+
+  request.onupgradeneeded = () => {
+    const database = request.result;
+
+    if (!database.objectStoreNames.contains(GIFT_SOUND_STORE)) {
+      database.createObjectStore(GIFT_SOUND_STORE);
+    }
+  };
+
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(
+    request.error || new Error("Could not open gift sound storage.")
+  );
+});
+
+const saveGiftSoundFile = async (file) => {
+  const database = await openGiftSoundDatabase();
+
+  await new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      GIFT_SOUND_STORE,
+      "readwrite"
+    );
+
+    transaction.objectStore(GIFT_SOUND_STORE).put(
+      file,
+      CUSTOM_GIFT_SOUND_KEY
+    );
+
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(
+      transaction.error ||
+      new Error("Could not save the custom gift sound.")
+    );
+    transaction.onabort = () => reject(
+      transaction.error ||
+      new Error("Saving the custom gift sound was stopped.")
+    );
+  });
+
+  database.close();
+};
+
+const loadGiftSoundFile = async () => {
+  const database = await openGiftSoundDatabase();
+
+  const file = await new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      GIFT_SOUND_STORE,
+      "readonly"
+    );
+
+    const request = transaction
+      .objectStore(GIFT_SOUND_STORE)
+      .get(CUSTOM_GIFT_SOUND_KEY);
+
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(
+      request.error ||
+      new Error("Could not load the custom gift sound.")
+    );
+  });
+
+  database.close();
+  return file;
+};
+
+const deleteGiftSoundFile = async () => {
+  const database = await openGiftSoundDatabase();
+
+  await new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      GIFT_SOUND_STORE,
+      "readwrite"
+    );
+
+    transaction
+      .objectStore(GIFT_SOUND_STORE)
+      .delete(CUSTOM_GIFT_SOUND_KEY);
+
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(
+      transaction.error ||
+      new Error("Could not remove the custom gift sound.")
+    );
+  });
+
+  database.close();
+};
+
 const defaults = [
   { id: "youtube", name: "YouTube", server: "rtmps://a.rtmps.youtube.com/live2", key: "", enabled: true },
   { id: "twitch", name: "Twitch", server: "rtmp://live.twitch.tv/app", key: "", enabled: true },
@@ -438,9 +534,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
     localStorage.getItem("streambridge_gift_sound_preset") || "neon"
   );
 
-  const [customGiftSound, setCustomGiftSound] = useState(() =>
-    localStorage.getItem("streambridge_custom_gift_sound") || ""
-  );
+  const [customGiftSound, setCustomGiftSound] = useState("");
 
   const [customGiftSoundName, setCustomGiftSoundName] = useState(() =>
     localStorage.getItem("streambridge_custom_gift_sound_name") || ""
@@ -478,8 +572,48 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
   const giftAudioContextRef = useRef(null);
 
   const customGiftAudioRef = useRef(null);
+  const customGiftObjectUrlRef = useRef("");
   const customGiftFadeTimerRef = useRef(null);
   const customGiftStopTimerRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreCustomGiftSound = async () => {
+      try {
+        const savedFile = await loadGiftSoundFile();
+
+        if (cancelled || !savedFile) return;
+
+        if (customGiftObjectUrlRef.current) {
+          URL.revokeObjectURL(customGiftObjectUrlRef.current);
+        }
+
+        const objectUrl = URL.createObjectURL(savedFile);
+        customGiftObjectUrlRef.current = objectUrl;
+
+        setCustomGiftSound(objectUrl);
+        setCustomGiftSoundName(
+          savedFile.name ||
+          localStorage.getItem(
+            "streambridge_custom_gift_sound_name"
+          ) ||
+          "Custom gift sound"
+        );
+      } catch (error) {
+        console.warn(
+          "Saved custom gift sound could not be restored:",
+          error
+        );
+      }
+    };
+
+    restoreCustomGiftSound();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const stopGiftAlertSound = () => {
     clearInterval(customGiftFadeTimerRef.current);
@@ -751,7 +885,7 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
     playBuiltInGiftSound(giftSoundPreset, volume);
   };
 
-  const onCustomGiftSoundChange = (event) => {
+  const onCustomGiftSoundChange = async (event) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -760,7 +894,8 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
       "audio/mpeg",
       "audio/mp3",
       "audio/wav",
-      "audio/x-wav"
+      "audio/x-wav",
+      "audio/wave"
     ];
 
     if (
@@ -778,43 +913,65 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
       return;
     }
 
-    const reader = new FileReader();
+    try {
+      stopGiftAlertSound();
+      await saveGiftSoundFile(file);
 
-    reader.onload = () => {
-      const value = String(reader.result || "");
-
-      try {
-        localStorage.setItem(
-          "streambridge_custom_gift_sound",
-          value
-        );
-
-        localStorage.setItem(
-          "streambridge_custom_gift_sound_name",
-          file.name
-        );
-
-        localStorage.setItem(
-          "streambridge_gift_sound_preset",
-          "custom"
-        );
-
-        setCustomGiftSound(value);
-        setCustomGiftSoundName(file.name);
-        setGiftSoundPreset("custom");
-      } catch {
-        alert(
-          "This sound is too large to save. Try a shorter MP3 file."
-        );
+      if (customGiftObjectUrlRef.current) {
+        URL.revokeObjectURL(customGiftObjectUrlRef.current);
       }
-    };
 
-    reader.readAsDataURL(file);
-    event.target.value = "";
+      const objectUrl = URL.createObjectURL(file);
+      customGiftObjectUrlRef.current = objectUrl;
+
+      localStorage.removeItem(
+        "streambridge_custom_gift_sound"
+      );
+
+      localStorage.setItem(
+        "streambridge_custom_gift_sound_name",
+        file.name
+      );
+
+      localStorage.setItem(
+        "streambridge_gift_sound_preset",
+        "custom"
+      );
+
+      setCustomGiftSound(objectUrl);
+      setCustomGiftSoundName(file.name);
+      setGiftSoundPreset("custom");
+
+      alert(
+        `${file.name} is ready. Use Preview Sound or Test Full Gift Alert.`
+      );
+    } catch (error) {
+      console.error("Custom gift sound save failed:", error);
+
+      alert(
+        "DavaBridge could not save this sound. Try a different MP3 or WAV file."
+      );
+    } finally {
+      event.target.value = "";
+    }
   };
 
-  const resetGiftSoundMixer = () => {
+  const resetGiftSoundMixer = async () => {
     stopGiftAlertSound();
+
+    try {
+      await deleteGiftSoundFile();
+    } catch (error) {
+      console.warn(
+        "Custom gift sound storage could not be cleared:",
+        error
+      );
+    }
+
+    if (customGiftObjectUrlRef.current) {
+      URL.revokeObjectURL(customGiftObjectUrlRef.current);
+      customGiftObjectUrlRef.current = "";
+    }
 
     setGiftSoundPreset("neon");
     setGiftAlertVolume(70);
@@ -864,6 +1021,13 @@ const [youtubeViewers, setYoutubeViewers] = useState(0); const [facebookConnecte
   useEffect(() => {
     return () => {
       clearTimeout(giftAlertTimerRef.current);
+
+      stopGiftAlertSound();
+
+      if (customGiftObjectUrlRef.current) {
+        URL.revokeObjectURL(customGiftObjectUrlRef.current);
+        customGiftObjectUrlRef.current = "";
+      }
 
       if (giftAudioContextRef.current) {
         giftAudioContextRef.current.close().catch(() => {});
@@ -2347,7 +2511,7 @@ const homeCard = {
                 }}>
                   {customGiftSoundName
                     ? `Loaded: ${customGiftSoundName}`
-                    : "No custom sound uploaded. Maximum file size: 2 MB."}
+                    : "No custom sound uploaded. MP3 or WAV, maximum file size: 2 MB. Saved securely in this browser."}
                 </div>
 
                 <label style={{ display: "grid", gap: 7 }}>
@@ -2545,6 +2709,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
