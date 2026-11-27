@@ -2501,6 +2501,10 @@ const homeCard = {
                           count: 1,
                           image: ""
                         });
+
+                        window.setTimeout(() => {
+                          setShowLiveChat(false);
+                        }, 5200);
                       }, 150);
                     }}
                     style={{
@@ -2541,6 +2545,7 @@ const homeCard = {
     </main>
   );
 }
+
 
 
 
