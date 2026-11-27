@@ -526,9 +526,15 @@ async function pollFacebookComments() {
   try {
     const found = await findActiveFacebookLive();
     if (!found) {
+      broadcastJson({
+        type: "facebook_viewers",
+        viewers: 0,
+      });
+
       if (currentFacebookLiveId) {
         broadcastJson({ type: "facebook_status", connected: true, live: false, status: "Facebook is connected, but no active Facebook Live video was found." });
       }
+
       currentFacebookLiveId = "";
       facebookInitialCommentsLoaded = false;
       seenFacebookCommentIds.clear();
@@ -536,6 +542,38 @@ async function pollFacebookComments() {
     }
 
     const liveVideoId = String(found.activeLiveVideo.id || "");
+
+    let facebookViewers = 0;
+
+    try {
+      const viewersUrl = new URL(
+        `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${encodeURIComponent(liveVideoId)}`
+      );
+
+      viewersUrl.searchParams.set("fields", "live_views");
+      viewersUrl.searchParams.set("access_token", found.pageAccessToken);
+
+      const viewersData = await readFacebookJson(viewersUrl.toString());
+
+      facebookViewers = Number(viewersData.live_views || 0);
+
+      if (!Number.isFinite(facebookViewers) || facebookViewers < 0) {
+        facebookViewers = 0;
+      }
+    } catch (viewerError) {
+      console.warn(
+        "Facebook viewer count unavailable:",
+        viewerError instanceof Error ? viewerError.message : viewerError
+      );
+
+      facebookViewers = 0;
+    }
+
+    broadcastJson({
+      type: "facebook_viewers",
+      viewers: facebookViewers,
+    });
+
     if (liveVideoId !== currentFacebookLiveId) {
       currentFacebookLiveId = liveVideoId;
       facebookInitialCommentsLoaded = false;
@@ -1445,6 +1483,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`DavaBridge server is running on port ${PORT}`);
   if (facebookConnection.connected) startFacebookPolling();
 });
+
 
 
 
